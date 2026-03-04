@@ -105,10 +105,6 @@ pub struct CltConfig {
 // ---------------------------------------------------------------------------
 
 /// Currently loaded encoder weights on GPU.
-///
-/// Fields are populated by [`CrossLayerTranscoder::load_encoder()`] and
-/// consumed by encoding methods (added in the next commit).
-#[allow(dead_code)] // w_enc, b_enc read by encode() added in next commit
 struct LoadedEncoder {
     /// Layer index this encoder corresponds to.
     layer: usize,
@@ -383,6 +379,89 @@ impl CrossLayerTranscoder {
 
         Ok(())
     }
+
+    // --- Encoding ---
+
+    /// Encode a residual stream activation into sparse CLT features.
+    ///
+    /// The residual should be the "residual mid" activation at the given layer
+    /// (after attention, before MLP).
+    ///
+    /// Returns all features that pass the `ReLU` threshold, sorted by
+    /// activation magnitude in descending order.
+    ///
+    /// # Shapes
+    /// - `residual`: `[d_model]` — residual stream activation at one position
+    /// - returns: [`SparseActivations`] with `(CltFeatureId, f32)` pairs
+    ///
+    /// # Requires
+    /// [`load_encoder(layer)`](Self::load_encoder) must have been called first.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`MIError::Hook`] if no encoder is loaded or the wrong layer is loaded.
+    /// Returns [`MIError::Model`] on tensor operation failure.
+    pub fn encode(&self, residual: &Tensor, layer: usize) -> Result<SparseActivations> {
+        let enc = self.loaded_encoder.as_ref().ok_or_else(|| {
+            MIError::Hook(format!(
+                "no encoder loaded — call load_encoder({layer}) first"
+            ))
+        })?;
+        if enc.layer != layer {
+            return Err(MIError::Hook(format!(
+                "loaded encoder is for layer {}, but layer {layer} was requested",
+                enc.layer
+            )));
+        }
+
+        // Compute pre-activations in F32 for numerical stability.
+        // W_enc: [n_features, d_model], residual: [d_model]
+        // pre_acts = W_enc @ residual + b_enc → [n_features]
+        let residual_f32 = residual.flatten_all()?;
+        // PROMOTE: matmul and bias add require F32 for numerical stability
+        let residual_f32 = residual_f32.to_dtype(DType::F32)?;
+        let w_enc_f32 = enc.w_enc.to_dtype(DType::F32)?;
+        let b_enc_f32 = enc.b_enc.to_dtype(DType::F32)?;
+
+        let pre_acts = w_enc_f32.matmul(&residual_f32.unsqueeze(1)?)?.squeeze(1)?;
+        let pre_acts = (&pre_acts + &b_enc_f32)?;
+
+        // ReLU activation.
+        let acts = pre_acts.relu()?;
+
+        // Transfer to CPU for sparse extraction.
+        let acts_vec: Vec<f32> = acts.to_vec1()?;
+
+        let mut features: Vec<(CltFeatureId, f32)> = acts_vec
+            .iter()
+            .enumerate()
+            .filter(|&(_, v)| *v > 0.0)
+            .map(|(i, v)| (CltFeatureId { layer, index: i }, *v))
+            .collect();
+
+        // Sort by activation magnitude (descending).
+        features.sort_by(|a, b| b.1.partial_cmp(&a.1).unwrap_or(std::cmp::Ordering::Equal));
+
+        Ok(SparseActivations { features })
+    }
+
+    /// Encode and return only the top-k most active features.
+    ///
+    /// # Shapes
+    /// - `residual`: `[d_model]` — residual stream activation at one position
+    /// - returns: [`SparseActivations`] truncated to at most `k` entries
+    ///
+    /// # Requires
+    /// [`load_encoder(layer)`](Self::load_encoder) must have been called first.
+    ///
+    /// # Errors
+    ///
+    /// Same as [`encode()`](Self::encode).
+    pub fn top_k(&self, residual: &Tensor, layer: usize, k: usize) -> Result<SparseActivations> {
+        let mut sparse = self.encode(residual, layer)?;
+        sparse.truncate(k);
+        Ok(sparse)
+    }
 }
 
 // ---------------------------------------------------------------------------
@@ -489,6 +568,92 @@ mod tests {
         assert_eq!(sparse.len(), 2);
         assert_eq!(sparse.features[0].0.index, 5);
         assert_eq!(sparse.features[1].0.index, 2);
+    }
+
+    #[test]
+    fn encode_synthetic() {
+        // Create a small synthetic encoder: 4 features, d_model=8
+        let device = Device::Cpu;
+        let d_model = 8;
+        let n_features = 4;
+
+        // W_enc: [4, 8] — identity-like rows so we can predict output
+        #[rustfmt::skip]
+        let w_enc_data: Vec<f32> = vec![
+            1.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, // feature 0: picks up residual[0]
+            0.0, 1.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, // feature 1: picks up residual[1]
+            0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 0.0, 0.0, // feature 2: picks up residual[2]
+            0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 0.0, // feature 3: picks up residual[3]
+        ];
+        let w_enc = Tensor::from_vec(w_enc_data, (n_features, d_model), &device).unwrap();
+
+        // b_enc: [4] — bias shifts to test ReLU
+        let b_enc_data: Vec<f32> = vec![0.0, -0.5, 0.0, -2.0]; // feature 3 will need residual[3] > 2.0
+        let b_enc = Tensor::from_vec(b_enc_data, (n_features,), &device).unwrap();
+
+        // Residual: [8] — values: [1.5, 0.3, 0.0, 1.0, ...]
+        let residual_data: Vec<f32> = vec![1.5, 0.3, 0.0, 1.0, 0.0, 0.0, 0.0, 0.0];
+        let residual = Tensor::from_vec(residual_data, (d_model,), &device).unwrap();
+
+        // Expected pre_acts = W_enc @ residual + b_enc
+        // = [1.5, 0.3, 0.0, 1.0] + [0.0, -0.5, 0.0, -2.0]
+        // = [1.5, -0.2, 0.0, -1.0]
+        // After ReLU: [1.5, 0.0, 0.0, 0.0]
+        // Only feature 0 is active with activation 1.5
+
+        // Create a fake loaded encoder
+        let clt = CrossLayerTranscoder {
+            repo_id: "test".to_owned(),
+            fetch_config: hf_fetch_model::FetchConfig::builder().build().unwrap(),
+            encoder_paths: vec![None],
+            config: CltConfig {
+                n_layers: 1,
+                d_model,
+                n_features_per_layer: n_features,
+                n_features_total: n_features,
+                model_name: "test".to_owned(),
+            },
+            loaded_encoder: Some(LoadedEncoder {
+                layer: 0,
+                w_enc,
+                b_enc,
+            }),
+        };
+
+        let sparse = clt.encode(&residual, 0).unwrap();
+        assert_eq!(sparse.len(), 1, "only feature 0 should be active");
+        assert_eq!(sparse.features[0].0.index, 0);
+        assert!((sparse.features[0].1 - 1.5).abs() < 1e-5);
+    }
+
+    #[test]
+    fn encode_wrong_layer_errors() {
+        let device = Device::Cpu;
+        let w_enc = Tensor::zeros((4, 8), DType::F32, &device).unwrap();
+        let b_enc = Tensor::zeros((4,), DType::F32, &device).unwrap();
+        let residual = Tensor::zeros((8,), DType::F32, &device).unwrap();
+
+        let clt = CrossLayerTranscoder {
+            repo_id: "test".to_owned(),
+            fetch_config: hf_fetch_model::FetchConfig::builder().build().unwrap(),
+            encoder_paths: vec![None; 2],
+            config: CltConfig {
+                n_layers: 2,
+                d_model: 8,
+                n_features_per_layer: 4,
+                n_features_total: 8,
+                model_name: "test".to_owned(),
+            },
+            loaded_encoder: Some(LoadedEncoder {
+                layer: 0,
+                w_enc,
+                b_enc,
+            }),
+        };
+
+        // Requesting layer 1 when layer 0 is loaded should error.
+        let result = clt.encode(&residual, 1);
+        assert!(result.is_err());
     }
 
     #[test]
