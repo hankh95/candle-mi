@@ -4,10 +4,12 @@
 //!
 //! Loads pre-trained CLT weights from `HuggingFace` (circuit-tracer format),
 //! encodes residual stream activations into sparse feature activations,
-//! and injects decoder vectors into the residual stream for steering.
+//! injects decoder vectors into the residual stream for steering, and
+//! scores features by decoder projection for attribution graph construction.
 //!
 //! Memory-efficient: uses stream-and-free for encoders (~75 MB/layer on GPU)
 //! and a micro-cache for steering vectors (~450 KB for 50 features).
+//! Decoder scoring operates entirely on CPU (one file at a time, up to ~2 GB).
 //!
 //! # CLT Architecture
 //!
@@ -1158,7 +1160,7 @@ impl CrossLayerTranscoder {
             )));
         }
 
-        // PROMOTE: F32 for numerical stability in dot products
+        // PROMOTE: F32 for dot-product precision matching Python reference
         let direction_f32 = direction.to_dtype(DType::F32)?.to_device(&Device::Cpu)?;
 
         // Optionally normalize direction to unit length for cosine similarity.
@@ -1201,7 +1203,7 @@ impl CrossLayerTranscoder {
                     .map_err(|e| MIError::Config(format!("tensor '{dec_name}' not found: {e}")))?,
                 &Device::Cpu,
             )?;
-            // PROMOTE: F32 for numerical stability
+            // PROMOTE: decoder weights are BF16 on disk; F32 for matmul precision
             let w_dec_f32 = w_dec.to_dtype(DType::F32)?;
 
             // Extract target layer slice: [n_features, d_model]
@@ -1268,6 +1270,11 @@ impl CrossLayerTranscoder {
     /// empty, or `target_layer` is out of range.
     /// Returns [`MIError::Download`] if decoder files cannot be fetched.
     /// Returns [`MIError::Model`] on tensor operation failure.
+    ///
+    /// # Memory
+    ///
+    /// Stacks directions to `[n_words, d_model]` on CPU. Each decoder file
+    /// loaded one at a time (up to ~2 GB for layer 0). No GPU memory required.
     pub fn score_features_by_decoder_projection_batch(
         &mut self,
         directions: &[Tensor],
@@ -1297,7 +1304,7 @@ impl CrossLayerTranscoder {
             )));
         }
 
-        // PROMOTE: Stack directions to [n_words, d_model] on CPU, F32.
+        // PROMOTE: directions may arrive as BF16; F32 for matmul precision
         let dirs_f32: Vec<Tensor> = directions
             .iter()
             .map(|d| d.to_dtype(DType::F32)?.to_device(&Device::Cpu))
@@ -1344,7 +1351,7 @@ impl CrossLayerTranscoder {
                     .map_err(|e| MIError::Config(format!("tensor '{dec_name}' not found: {e}")))?,
                 &Device::Cpu,
             )?;
-            // PROMOTE: F32 for numerical stability
+            // PROMOTE: decoder weights are BF16 on disk; F32 for matmul precision
             let w_dec_f32 = w_dec.to_dtype(DType::F32)?;
             let dec_slice = w_dec_f32.i((.., target_offset, ..))?; // [n_features, d_model]
 
@@ -1414,6 +1421,11 @@ impl CrossLayerTranscoder {
     /// of range, or if `target_layer < feature.layer` for any feature.
     /// Returns [`MIError::Download`] if decoder files cannot be fetched.
     /// Returns [`MIError::Model`] on tensor operation failure.
+    ///
+    /// # Memory
+    ///
+    /// Loads each decoder to CPU (up to ~2 GB), extracts independent F32
+    /// tensors, then drops the large file before processing the next layer.
     pub fn extract_decoder_vectors(
         &mut self,
         features: &[CltFeatureId],
@@ -1481,7 +1493,7 @@ impl CrossLayerTranscoder {
                     // Extract as independent F32 tensor (OOM-safe copy).
                     let view = w_dec.i((index, target_offset))?;
                     let dims = view.dims().to_vec();
-                    // PROMOTE: F32 for numerical stability
+                    // PROMOTE: decoder weights are BF16 on disk; extract as F32
                     let values = view.to_dtype(DType::F32)?.to_vec1::<f32>()?;
                     let independent = Tensor::from_vec(values, dims.as_slice(), &Device::Cpu)?;
                     e.insert(independent);
