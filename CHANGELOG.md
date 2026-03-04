@@ -5,6 +5,44 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/),
 and this project adheres to [Semantic Versioning](https://semver.org/).
 
+## [Unreleased]
+
+### Added
+
+- **Cross-Layer Transcoder (CLT) support** (Phase 3) — `CrossLayerTranscoder`
+  struct with `CltConfig`, `CltFeatureId`, and `SparseActivations` types;
+  loading encoder/decoder weight pairs from HuggingFace repos (e.g.
+  `mntss/clt-gemma-2-2b-426k`); `encode()` for full sparse activations,
+  `top_k()` for the k strongest features at any layer
+- **CLT feature injection** — `cache_steering_vectors_all_downstream()` to
+  pre-compute per-layer decoder vectors, `prepare_hook_injection()` to build
+  `HookSpec` entries for multi-layer causal interventions; reproduces
+  Anthropic's cross-layer steering methodology
+- **Melometis position-sweep validation tests** — correlational (encode at
+  every token position, verify position-specificity) and causal (inject at
+  every position, measure L2 logit distance) tests reproducing Anthropic's
+  "Planning in Poems" Figure 13 result in Rust
+- Python validation script (`scripts/clt_position_sweep_validation.py`) and
+  comparison documents (`scripts/clt_position_sweep_comparison.md`,
+  `scripts/rwkv7_validation_comparison.md`) for cross-implementation
+  reproducibility
+
+### Fixed
+
+- `SparseActivations` now derives `Debug` and `Clone` for consistency with
+  other public types
+- `Intervention::Add` now applies at `ResidPost` hook point with automatic
+  dtype coercion (F32 steering vectors applied to BF16/F32 hidden states)
+
+### Changed
+
+- **Default GPU dtype changed from BF16 to F32** — research-grade precision
+  matching Python/PyTorch exactly; RWKV-7 GPU logit error dropped from 0.027
+  (0.36%) under BF16 to 0.000002 under F32; all validation tests updated
+  accordingly; models up to ~7B fit in 16GB VRAM at F32
+- Transformer attention mask dtype now derived from embedding weights instead
+  of being hardcoded, ensuring consistency regardless of chosen precision
+
 ## [0.0.3] - 2026-03-01
 
 ### Added
@@ -41,7 +79,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 - `MIModel::from_pretrained("RWKV/RWKV7-Goose-World3-1.5B-HF")` integration
   test validating the full one-line loading path for RWKV-7 models
 - Integration tests for RWKV-6 (against plip-rs reference) and RWKV-7
-  (against fla/flash-linear-attention reference), CPU F32 + GPU BF16
+  (against fla/flash-linear-attention reference), CPU F32 + GPU F32
+  (BF16 variant retained as regression test)
 - RWKV clippy and test steps in CI publish workflow
 - VRAM budget table and `config.json` field reference in rustdoc
 - `MIError::Download` variant for download failures
@@ -138,6 +177,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 - CI workflow (fmt, clippy pedantic, tests, feature-flag hygiene)
 - Tag-triggered publish workflow with `workflow_dispatch` fallback
 
+[Unreleased]: https://github.com/PCfVW/candle-mi/compare/v0.0.3...HEAD
 [0.0.3]: https://github.com/PCfVW/candle-mi/releases/tag/v0.0.3
 [0.0.2-phase1]: https://github.com/PCfVW/candle-mi/releases/tag/v0.0.2-phase1
 [0.0.1]: https://github.com/PCfVW/candle-mi/releases/tag/v0.0.1
