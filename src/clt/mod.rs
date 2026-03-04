@@ -62,6 +62,7 @@ impl std::fmt::Display for CltFeatureId {
 ///
 /// Only features with non-zero activation (after `ReLU`) are stored,
 /// sorted by activation magnitude in descending order.
+#[derive(Debug, Clone)]
 pub struct SparseActivations {
     /// Active features with their activation magnitudes, sorted descending.
     pub features: Vec<(CltFeatureId, f32)>,
