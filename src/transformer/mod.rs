@@ -238,15 +238,12 @@ impl GenericTransformer {
         hooks: &HookSpec,
         cache: &mut HookCache,
     ) -> Result<Tensor> {
-        let layer_slice = self
-            .layers
-            .get(start..end)
-            .ok_or_else(|| {
-                crate::error::MIError::Intervention(format!(
-                    "layer range {start}..{end} out of bounds (n_layers={})",
-                    self.layers.len()
-                ))
-            })?;
+        let layer_slice = self.layers.get(start..end).ok_or_else(|| {
+            crate::error::MIError::Intervention(format!(
+                "layer range {start}..{end} out of bounds (n_layers={})",
+                self.layers.len()
+            ))
+        })?;
         for (offset, layer) in layer_slice.iter().enumerate() {
             let layer_idx = start + offset;
 
@@ -699,13 +696,11 @@ fn inject_feedback_at_position(
         .flatten_all()?
         .to_vec1()?;
     let start = position * d_model;
-    let dest = delta_data
-        .get_mut(start..start + d_model)
-        .ok_or_else(|| {
-            crate::error::MIError::Intervention(format!(
-                "feedback position {position} out of bounds (seq_len={seq_len})"
-            ))
-        })?;
+    let dest = delta_data.get_mut(start..start + d_model).ok_or_else(|| {
+        crate::error::MIError::Intervention(format!(
+            "feedback position {position} out of bounds (seq_len={seq_len})"
+        ))
+    })?;
     dest.copy_from_slice(&vec_f32);
 
     let delta = Tensor::from_vec(delta_data, (1, seq_len, d_model), hidden.device())?
