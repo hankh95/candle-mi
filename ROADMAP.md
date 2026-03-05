@@ -2,7 +2,7 @@
 
 > *MI for the Rust of us*
 
-**Date:** February 19, 2026 (last updated: March 4, 2026)
+**Date:** February 19, 2026 (last updated: March 5, 2026)
 **Status:** Phase 0 + Phase 1 + Phase 2 complete; Phase 3 in progress (CLT loading, encoding, injection, and Gemma 2 2B validation done). Published on [crates.io](https://crates.io/crates/candle-mi) as v0.0.3. Default dtype changed to F32 for research-grade precision.
 **Context:** Building on plip-rs experience (7 model backends incl. Gemma 2, attention knockout, state knockout, effective attention, steering, logit lens, CLT encoding/injection). Two successful replications of Anthropic's "Planning in Poems" Figure 13 validate the approach: Gemma 2 2B with 426K CLTs (melometis branch) and Llama 3.2 1B with 524K CLTs (tragos branch). Target: a publishable, generic Rust MI crate endorsed by HuggingFace.
 
@@ -47,8 +47,11 @@
   - [Phase 2: RWKV-6 + RWKV-7](#phase-2-rwkv-6--rwkv-7) ✅
   - [Phase 3: CLT Support](#phase-3-clt-support) 🔧
   - [Phase 4: SAE Support](#phase-4-sae-support)
-  - [Phase 5: Polish + Publish](#phase-5-polish--publish)
-  - [Phase 6+: Extensions (Future)](#phase-6-extensions-future)
+  - [Phase 5: Polish + Publish + Auto-Config](#phase-5-polish--publish--auto-config)
+  - [Phase 6a: Standard MI Analysis Stack](#phase-6a-standard-mi-analysis-stack)
+  - [Phase 6b: Static Circuit Analysis](#phase-6b-static-circuit-analysis)
+  - [Phase 6c: Model Coverage & Ecosystem](#phase-6c-model-coverage--ecosystem)
+  - [Phase 7+: Extensions (Future)](#phase-7-extensions-future)
 - [8. Key Design Decisions](#8-key-design-decisions)
 - [9. Relationship to Existing Projects](#9-relationship-to-existing-projects)
   - [9.1 plip-rs (AIware 2026)](#91-plip-rs-aiware-2026)
@@ -306,7 +309,7 @@ The 3B+ variants (Yi 6B, Phi-4-mini 3.8B, 7B models) exceed 16 GB at F32 and req
 | **Mamba / SSM** | Selective state space; different recurrence | Separate backend |
 | **Encoder-only** (BERT, etc.) | Bidirectional attention, [MASK] token | Different forward pass structure |
 | **Encoder-decoder** (T5, etc.) | Cross-attention between encoder and decoder | Different forward pass structure |
-| **Very old architectures** (GPT-2, GPT-J) | Absolute position embeddings, post-norm | Could be added as config variants if needed |
+| **Very old architectures** (GPT-2, GPT-J) | Absolute position embeddings, post-norm | Planned for Phase 6c (GPT-2 family + Pythia) |
 | **Codestral** (Mistral) | Only available at 22 B; exceeds 16 GB MI GPU budgets | Would need ≥48 GB VRAM (A6000, etc.) |
 
 ### 3.5 Config Parsing from HuggingFace `config.json`
@@ -326,6 +329,7 @@ impl TransformerConfig {
             "phi3" => Self::parse_phi3(config),
             "starcoder2" => Self::parse_starcoder2(config),
             "mistral" => Self::parse_mistral(config),
+            // Phase 5: unknown model_type will fall back to from_hf_config_auto()
             other => Err(MIError::Config(format!("unsupported model_type: '{other}'"))),
         }
     }
@@ -525,21 +529,21 @@ Where `A_t` (transition), `B_t` (input), and `C_t` (output) vary by architecture
 |-----------|----------|-------|
 | **CLT loading + encoding** | ✅ Working (Phase 3) | `CrossLayerTranscoder` struct; per-file download via `hf-fetch-model`; `encode()` for full sparse activations, `top_k()` for strongest features; validated on Gemma 2 2B (8/8 top-1 match vs Python HF, <5% relative error) |
 | **CLT feature injection** | ✅ Working (Phase 3) | `cache_steering_vectors_all_downstream()` + `prepare_hook_injection()` for multi-layer causal interventions; `Intervention::Add` at `ResidPost` with dtype coercion; melometis position-sweep reproduced (last-position L2 ranks #1 in both Rust and Python) |
-| **Attribution graphs** | High | Record edge weights through CLT features; prune to circuits |
-| **SAE loading + encoding** | Medium | Load pre-trained SAE weights; encode activations |
-| **SAE feature injection** | Medium | Same as CLT but for SAEs |
-| **Activation patching** | Medium | Swap activations between clean/corrupted runs at specific hook points |
-| **Residual stream decomposition** | Medium | Decompose residual stream into per-layer, per-component contributions |
+| **Attribution graphs** | ✅ Working (Phase 3) | `AttributionEdge`, `AttributionGraph` with `top_k()`/`threshold()` pruning; `score_features_by_decoder_projection()`, `build_attribution_graph()` |
+| **SAE loading + encoding** | Medium (Phase 4) | Load pre-trained SAE weights; encode activations |
+| **SAE feature injection** | Medium (Phase 4) | Same as CLT but for SAEs |
+| **Activation patching** | High (Phase 6a) | Swap activations between clean/corrupted runs at specific hook points |
+| **Residual stream decomposition** | High (Phase 6a) | Decompose residual stream into per-layer, per-component contributions |
 
 ### 5.3 Future (not required now)
 
 | Capability | Notes |
 |-----------|-------|
-| **Probing** | Linear probes on activations (move from plip-rs to optional feature) |
-| **Causal scrubbing** | Systematic causal intervention framework |
-| **Indirect object identification** | IOI-style circuit analysis |
-| **Induction head detection** | Automated induction head finding |
-| **Feature visualization** | Export attention/activation data for visualization tools; deloson ([live demo](https://PCfVW.github.io/deloson/)) already consumes plip-rs layer scan JSON — candle-mi should preserve this output format |
+| **Probing** | Linear probes on activations (Phase 7+) |
+| **Causal scrubbing** | Systematic causal intervention framework (subsumed by activation patching, Phase 6a) |
+| **Indirect object identification** | IOI-style circuit analysis (enabled by Phase 6a activation patching + Phase 6b head detection) |
+| **Induction head detection** | Automated induction head finding (Phase 6b) |
+| **Feature visualization** | Export attention/activation data for visualization tools (Phase 7+); deloson ([live demo](https://PCfVW.github.io/deloson/)) already consumes plip-rs layer scan JSON — candle-mi should preserve this output format |
 
 ---
 
@@ -769,15 +773,17 @@ CI enforces the same three checks on every push. A red CI is treated as a blocki
 
 **Deliverable:** SAE pipeline working alongside CLTs. — **PUSH + tag `v0.0.5-phase4`**
 
-### Phase 5: Polish + Publish
+### Phase 5: Polish + Publish + Auto-Config
 
-**Goal:** Documentation, examples, crates.io publication.
+**Goal:** Documentation, examples, auto-config for unknown model families, crates.io v0.1.0.
 
 - [ ] Write crate-level documentation with examples — **commit**
 - [ ] Write `BACKENDS.md` — how to add a new model architecture — **commit**
 - [ ] Write `HOOKS.md` — hook point reference and intervention walkthrough — **commit**
 - [ ] Write example programs (logit lens, knockout, steering, CLT scan) — **commit per example**
 - [ ] Audit public API surface (`pub` vs `pub(crate)`) — **commit**
+- [ ] Implement `from_hf_config_auto()` — generic config parser for unknown `model_type` values; reads `config.json` scalars (Tier 1–2) + safetensors tensor names (Tier 3: QKV/MLP layout, bias flags, norm type, post-norms) + `model_type` fixups (Tier 4: GemmaRmsNorm, embedding_scale, alternating_sliding_window). Two-tier dispatch: known families use existing parsers, unknown families use auto-parser. ~100 lines + ~20 lines tensor-name utilities. See `candle-mi-auto-config-brainstorming.md` for field-by-field derivation plan — **commit**
+- [ ] Validate auto-config against all 7 known families (must produce identical configs to manual parsers) — **commit**
 - [ ] Populate CHANGELOG.md with all notable changes from Phases 0–4 — **commit** — **PUSH** (release candidate)
 - [ ] **Release workflow** (publish v0.1.0 to crates.io — automated via `publish.yml`):
   1. Ensure `main` is clean: `git status` shows no uncommitted changes
@@ -790,16 +796,52 @@ CI enforces the same three checks on every push. A red CI is treated as a blocki
 - [ ] Submit PR to candle repo adding candle-mi to "Useful External Resources" (per Eric Buehler's invitation)
 - [ ] Announce (Rust ML community, MI community)
 
-### Phase 6+: Extensions (Future)
+### Phase 6a: Standard MI Analysis Stack
+
+**Goal:** The core causal analysis toolkit — transforms candle-mi from "model loader with hooks" into "general-purpose MI framework." Forward-only methods; no autograd needed (tractable on 16 GB VRAM up to ~7B F32).
+
+- [ ] Per-head hooks (`hook_z`, `hook_result`) — capture attention-weighted values and per-head output projected to `d_model` before summation. Requires `attention.rs` changes + re-validation of all 7 transformer families — **commit** — **PUSH**
+- [ ] Residual stream decomposition — `accumulated_resid()` (stack residual streams at each layer) + `decompose_resid()` (per-component additive contributions: each attention output, each MLP output, embeddings) on `FullActivationCache` — **commit**
+- [ ] Direct logit attribution — `logit_attrs()`: dot product of each component's residual contribution with unembedding direction of target tokens. Per-head, per-layer, per-MLP granularity — **commit**
+- [ ] Activation patching framework — `activation_patch()` generic + pre-built variants (`resid_pre`, `attn_out`, `mlp_out`, per-head). Clean/corrupted forward passes with activation swaps at specified hook points — **commit** — **PUSH**
+
+**Deliverable:** Causal tracing, component attribution, circuit localization. — **PUSH + tag**
+
+### Phase 6b: Static Circuit Analysis
+
+**Goal:** Weight-level understanding without forward passes — the "Mathematical Framework for Transformer Circuits" (Elhage et al. 2021) in Rust.
+
+- [ ] `FactoredMatrix` type — lazy `A @ B` representation with efficient SVD, eigenvalues, composition scores, corner inspection (no `[d_model, d_model]` materialization) — **commit**
+- [ ] QK/OV circuit extraction — expose `W_Q.T @ W_K` and `W_V @ W_O` as `FactoredMatrix` per head — **commit**
+- [ ] Weight folding — `fold_layer_norm()`, `center_writing_weights()`, `center_unembed()` for clean decomposition (without folding, LayerNorm entangles every component) — **commit**
+- [ ] Composition scores — Q/K/V-composition between head pairs via `FactoredMatrix` — **commit**
+- [ ] Head detection — automated induction head, previous-token head, duplicate-token head identification — **commit**
+- [ ] SVD interpretation — project weight singular vectors through unembedding to token-space representations — **commit** — **PUSH**
+
+**Deliverable:** Static circuit analysis toolkit. — **PUSH + tag**
+
+### Phase 6c: Model Coverage & Ecosystem
+
+**Goal:** Breadth — cover the most-studied MI models and improve ergonomics.
+
+- [ ] GPT-2 family — absolute positional embeddings (new config axis), post-norm architecture. The "fruit fly" of MI research — **commit** — **PUSH**
+- [ ] Pythia family (14M–12B) — EleutherAI MI research models with training checkpoints. Shares GPT-2-like architecture — **commit**
+- [ ] Additional hook points (`hook_rot_q`/`hook_rot_k`, `hook_q_input`/`hook_k_input`/`hook_v_input`, LayerNorm hooks) — **commit**
+- [ ] MoE transformer variant (Mixtral) — router analysis, expert specialization hooks — **commit** — **PUSH**
+- [ ] Evaluation suite (`sanity_check`, `induction_loss`) — quick model validation — **commit**
+- [ ] Richer tokenizer utilities (`to_str_tokens`, `test_prompt`, `tokens_to_residual_directions`) — **commit** — **PUSH**
+
+**Deliverable:** GPT-2/Pythia coverage, MoE support, improved ergonomics. — **PUSH + tag**
+
+### Phase 7+: Extensions (Future)
 
 - [ ] RWKV-4/5 backends (if community demand)
 - [ ] Mamba / Mamba-2 backend
 - [ ] GLA, RetNet backends (via generic linear RNN trait)
-- [ ] Activation patching
 - [ ] Probing module (optional feature)
 - [ ] Feature visualization export (JSON for web UIs)
-- [ ] MoE transformer variant
 - [ ] Quantized model support (GGUF, GPTQ, AWQ)
+- [ ] Backward hooks / gradient attribution (scaling optimization for multi-GPU; not needed at 16 GB single-GPU scale)
 
 ---
 
