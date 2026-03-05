@@ -676,7 +676,7 @@ CI enforces the same three checks on every push. A red CI is treated as a blocki
 
 **Branch strategy:** Work directly on `main` during solo development. Use short-lived feature branches only when a change spans multiple sessions and may leave `main` broken in between; merge back when green.
 
-**Tag convention:** Tag at each phase completion: `v0.0.1-phase0`, `v0.0.2-phase1`, etc. Tag `v0.1.0` at publication (Phase 5). Tags matching `v*` trigger `publish.yml`, which runs full CI then `cargo publish` automatically. **Always wait for `ci.yml` green before tagging** — bump `Cargo.toml` version + commit `Cargo.lock` first.
+**Tag convention:** Tag at each phase completion: `v0.0.1-phase0`, `v0.0.2-phase1`, etc. Tag `v0.1.0` at publication (Phase 5). Post-v0.1.0 minor bumps: `v0.2.0` (Phase 6a), `v0.3.0` (Phase 6b), `v0.4.0` (Phase 6c). Tags matching `v*` trigger `publish.yml`, which runs full CI then `cargo publish` automatically. **Always wait for `ci.yml` green before tagging** — bump `Cargo.toml` version + commit `Cargo.lock` first.
 
 ### Phase 0: Foundation
 
@@ -805,7 +805,7 @@ CI enforces the same three checks on every push. A red CI is treated as a blocki
 - [ ] Direct logit attribution — `logit_attrs()`: dot product of each component's residual contribution with unembedding direction of target tokens. Per-head, per-layer, per-MLP granularity — **commit**
 - [ ] Activation patching framework — `activation_patch()` generic + pre-built variants (`resid_pre`, `attn_out`, `mlp_out`, per-head). Clean/corrupted forward passes with activation swaps at specified hook points — **commit** — **PUSH**
 
-**Deliverable:** Causal tracing, component attribution, circuit localization. — **PUSH + tag**
+**Deliverable:** Causal tracing, component attribution, circuit localization. — **PUSH + tag `v0.2.0`**
 
 ### Phase 6b: Static Circuit Analysis
 
@@ -818,7 +818,7 @@ CI enforces the same three checks on every push. A red CI is treated as a blocki
 - [ ] Head detection — automated induction head, previous-token head, duplicate-token head identification — **commit**
 - [ ] SVD interpretation — project weight singular vectors through unembedding to token-space representations — **commit** — **PUSH**
 
-**Deliverable:** Static circuit analysis toolkit. — **PUSH + tag**
+**Deliverable:** Static circuit analysis toolkit. — **PUSH + tag `v0.3.0`**
 
 ### Phase 6c: Model Coverage & Ecosystem
 
@@ -831,7 +831,7 @@ CI enforces the same three checks on every push. A red CI is treated as a blocki
 - [ ] Evaluation suite (`sanity_check`, `induction_loss`) — quick model validation — **commit**
 - [ ] Richer tokenizer utilities (`to_str_tokens`, `test_prompt`, `tokens_to_residual_directions`) — **commit** — **PUSH**
 
-**Deliverable:** GPT-2/Pythia coverage, MoE support, improved ergonomics. — **PUSH + tag**
+**Deliverable:** GPT-2/Pythia coverage, MoE support, improved ergonomics. — **PUSH + tag `v0.4.0`**
 
 ### Phase 7+: Extensions (Future)
 
