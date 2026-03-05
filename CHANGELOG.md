@@ -7,9 +7,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+## [0.0.4] - 2026-03-05
+
 ### Added
 
-- **Cross-Layer Transcoder (CLT) support** (Phase 3) — `CrossLayerTranscoder`
+- **Recurrent feedback (anacrousis)** — `RecurrentPassSpec` and
+  `RecurrentFeedbackEntry` types for re-running transformer commitment layers
+  with directional feedback injection; `forward_recurrent()` for single-pass
+  feedback, `generate_recurrent()` for autoregressive generation with per-step
+  feedback; `embedding_vector()` on `MIBackend` for computing feedback
+  directions from token embeddings; validated on Gemma 2 2B rhyme-completion
+  task (baseline 9/15 → best 11/15 with unembed layers 8-15, scale 2.0)
+- **Cross-Layer Transcoder (CLT) support** — `CrossLayerTranscoder`
   struct with `CltConfig`, `CltFeatureId`, and `SparseActivations` types;
   loading encoder/decoder weight pairs from HuggingFace repos (e.g.
   `mntss/clt-gemma-2-2b-426k`); `encode()` for full sparse activations,
@@ -195,7 +204,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 - CI workflow (fmt, clippy pedantic, tests, feature-flag hygiene)
 - Tag-triggered publish workflow with `workflow_dispatch` fallback
 
-[Unreleased]: https://github.com/PCfVW/candle-mi/compare/v0.0.3...HEAD
+[Unreleased]: https://github.com/PCfVW/candle-mi/compare/v0.0.4-phase3...HEAD
+[0.0.4]: https://github.com/PCfVW/candle-mi/compare/v0.0.3...v0.0.4-phase3
 [0.0.3]: https://github.com/PCfVW/candle-mi/releases/tag/v0.0.3
 [0.0.2-phase1]: https://github.com/PCfVW/candle-mi/releases/tag/v0.0.2-phase1
 [0.0.1]: https://github.com/PCfVW/candle-mi/releases/tag/v0.0.1
