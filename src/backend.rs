@@ -317,6 +317,12 @@ fn sample_with_temperature(logits: &Tensor, temperature: f32) -> Result<u32> {
     let logits_f32 = logits.to_dtype(DType::F32)?;
     let logits_vec: Vec<f32> = logits_f32.flatten_all()?.to_vec1()?;
 
+    if logits_vec.is_empty() {
+        return Err(MIError::Model(candle_core::Error::Msg(
+            "empty logits".into(),
+        )));
+    }
+
     // Scale by temperature.
     let scaled: Vec<f32> = logits_vec.iter().map(|x| x / temperature).collect();
 

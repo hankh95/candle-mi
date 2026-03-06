@@ -220,8 +220,8 @@ impl GenericTransformer {
 
     /// Forward pass through a range of layers (internal helper).
     ///
-    /// Processes layers `start..end` with full hook support (capture +
-    /// intervention at every hook point).
+    /// Processes layers `start..end` with full hook support (capture
+    /// and intervention at every hook point).
     ///
     /// # Shapes
     /// - `hidden`: `[batch, seq, hidden_size]`
@@ -251,6 +251,9 @@ impl GenericTransformer {
             if hooks.is_captured(&HookPoint::ResidPre(layer_idx)) {
                 cache.store(HookPoint::ResidPre(layer_idx), hidden.clone());
             }
+            for intervention in hooks.interventions_at(&HookPoint::ResidPre(layer_idx)) {
+                hidden = crate::hooks::apply_intervention(&hidden, intervention)?;
+            }
 
             let residual = hidden.clone();
 
@@ -279,6 +282,9 @@ impl GenericTransformer {
             if hooks.is_captured(&HookPoint::AttnOut(layer_idx)) {
                 cache.store(HookPoint::AttnOut(layer_idx), hidden.clone());
             }
+            for intervention in hooks.interventions_at(&HookPoint::AttnOut(layer_idx)) {
+                hidden = crate::hooks::apply_intervention(&hidden, intervention)?;
+            }
 
             // Residual connection after attention
             hidden = (residual + &hidden)?;
@@ -286,6 +292,9 @@ impl GenericTransformer {
             // Hook: ResidMid
             if hooks.is_captured(&HookPoint::ResidMid(layer_idx)) {
                 cache.store(HookPoint::ResidMid(layer_idx), hidden.clone());
+            }
+            for intervention in hooks.interventions_at(&HookPoint::ResidMid(layer_idx)) {
+                hidden = crate::hooks::apply_intervention(&hidden, intervention)?;
             }
 
             let residual = hidden.clone();
@@ -297,6 +306,9 @@ impl GenericTransformer {
             if hooks.is_captured(&HookPoint::MlpPre(layer_idx)) {
                 cache.store(HookPoint::MlpPre(layer_idx), hidden.clone());
             }
+            for intervention in hooks.interventions_at(&HookPoint::MlpPre(layer_idx)) {
+                hidden = crate::hooks::apply_intervention(&hidden, intervention)?;
+            }
 
             // MLP
             hidden = layer.mlp.forward(&hidden)?;
@@ -304,6 +316,9 @@ impl GenericTransformer {
             // Hook: MlpPost
             if hooks.is_captured(&HookPoint::MlpPost(layer_idx)) {
                 cache.store(HookPoint::MlpPost(layer_idx), hidden.clone());
+            }
+            for intervention in hooks.interventions_at(&HookPoint::MlpPost(layer_idx)) {
+                hidden = crate::hooks::apply_intervention(&hidden, intervention)?;
             }
 
             // Optional post-feedforward norm (Gemma 2)
@@ -314,6 +329,9 @@ impl GenericTransformer {
             // Hook: MlpOut
             if hooks.is_captured(&HookPoint::MlpOut(layer_idx)) {
                 cache.store(HookPoint::MlpOut(layer_idx), hidden.clone());
+            }
+            for intervention in hooks.interventions_at(&HookPoint::MlpOut(layer_idx)) {
+                hidden = crate::hooks::apply_intervention(&hidden, intervention)?;
             }
 
             // Residual connection after MLP
@@ -377,6 +395,9 @@ impl GenericTransformer {
 
         if hooks.is_captured(&HookPoint::FinalNorm) {
             cache.store(HookPoint::FinalNorm, hidden.clone());
+        }
+        for intervention in hooks.interventions_at(&HookPoint::FinalNorm) {
+            hidden = crate::hooks::apply_intervention(&hidden, intervention)?;
         }
 
         let mut logits = self.project_logits(&hidden)?;

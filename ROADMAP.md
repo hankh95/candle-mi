@@ -2,8 +2,8 @@
 
 > *MI for the Rust of us*
 
-**Date:** February 19, 2026 (last updated: March 5, 2026)
-**Status:** Phase 0 + Phase 1 + Phase 2 complete; Phase 3 in progress (CLT loading, encoding, injection, and Gemma 2 2B validation done). Published on [crates.io](https://crates.io/crates/candle-mi) as v0.0.3. Default dtype changed to F32 for research-grade precision.
+**Date:** February 19, 2026 (last updated: March 6, 2026)
+**Status:** Phase 0 + Phase 1 + Phase 2 + Phase 3 complete. Published on [crates.io](https://crates.io/crates/candle-mi) as v0.0.4. Default dtype changed to F32 for research-grade precision.
 **Context:** Building on plip-rs experience (7 model backends incl. Gemma 2, attention knockout, state knockout, effective attention, steering, logit lens, CLT encoding/injection). Two successful replications of Anthropic's "Planning in Poems" Figure 13 validate the approach: Gemma 2 2B with 426K CLTs (melometis branch) and Llama 3.2 1B with 524K CLTs (tragos branch). Target: a publishable, generic Rust MI crate endorsed by HuggingFace.
 
 ---
@@ -45,7 +45,7 @@
   - [Phase 0: Foundation](#phase-0-foundation) ✅
   - [Phase 1: Generic Transformer](#phase-1-generic-transformer) ✅
   - [Phase 2: RWKV-6 + RWKV-7](#phase-2-rwkv-6--rwkv-7) ✅
-  - [Phase 3: CLT Support](#phase-3-clt-support) 🔧
+  - [Phase 3: CLT Support](#phase-3-clt-support) ✅
   - [Phase 4: SAE Support](#phase-4-sae-support)
   - [Phase 5: Polish + Publish + Auto-Config](#phase-5-polish--publish--auto-config)
   - [Phase 6a: Standard MI Analysis Stack](#phase-6a-standard-mi-analysis-stack)
@@ -757,11 +757,11 @@ CI enforces the same three checks on every push. A red CI is treated as a blocki
 - [x] Validate: load Gemma 2 2B CLT, reproduce melometis position-sweep results — correlational (8/8 top-1 match, <5% relative error) + causal (last-position L2 ranks #1), cross-validated against Python HF reference — **commit `7d7bd96`** — **PUSH** (CLT pipeline green on Gemma 2)
 - [x] Validate: load Llama 3.2 1B CLT (524K, `mntss/clt-llama-3.2-1b-524k`), reproduce tragos position-sweep results — second independent replication confirming the phenomenon generalises across architectures; config (16 layers, 2048 d_model, 32768 features/layer), encoding (5 layers), injection (L2=77.9), correlational sweep (8/11 unique top-1, Jaccard=0.000), causal sweep (last position #1, concentration 24.85x) — **commit** — **PUSH** (CLT pipeline green on Llama 3.2)
 - [x] Implement attribution graph construction — `AttributionEdge`, `AttributionGraph` types with `top_k()`/`threshold()` pruning; `score_features_by_decoder_projection()` (single + batch), `extract_decoder_vectors()`, `build_attribution_graph()` convenience methods; 9 unit tests with synthetic safetensors files — **commit `a6fffd9`**
-- [ ] Implement recurrent feedback (anacrousis) — `RecurrentPassSpec` with prefill-only and sustained generation-time modes; re-run commitment layers (L14–15 on Llama 3.2 1B) with optional CLT injection feedback at every autoregressive step — **commit**
-- [ ] Validate: replicate anacrousis results (28 conditions × 15 couplets; sustained mode converts 11/15 vs baseline 10/15) — **commit** — **PUSH** (anacrousis green)
-- [ ] Add `scripts/README.md` documenting validation scripts, reference data files, and regeneration instructions — **commit**
+- [x] Implement recurrent feedback (anacrousis) — `RecurrentPassSpec` with prefill-only and sustained generation-time modes; re-run commitment layers with optional feedback injection at every autoregressive step; `forward_recurrent()` and `generate_recurrent()` — **commit**
+- [x] Validate: replicate anacrousis results (28 conditions × 15 couplets; best 11/15 with unembed layers 8–15, scale 2.0) — `tests/validate_anacrousis.rs` (`#[ignore]`, requires CUDA + cached model) — **commit** — **PUSH** (anacrousis green)
+- [x] Add `scripts/README.md` documenting validation scripts, reference data files, and regeneration instructions — **commit**
 
-**Deliverable:** Full CLT pipeline on Gemma 2 2B and Llama 3.2 1B, plus anacrousis recurrent feedback experiment. — **PUSH + tag `v0.0.4-phase3`**
+**Deliverable:** Full CLT pipeline on Gemma 2 2B and Llama 3.2 1B, plus anacrousis recurrent feedback experiment. — **PUSH + tag `v0.0.4-phase3`** ✅ Published to [crates.io](https://crates.io/crates/candle-mi) on 2026-03-05.
 
 ### Phase 4: SAE Support
 

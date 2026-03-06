@@ -7,40 +7,29 @@
 //!
 //! ## Caching Strategy
 //!
-//! Masks are cached by `(seq_len, device_id, dtype)` to avoid recreating
+//! Masks are cached by `(seq_len, device_location, dtype)` to avoid recreating
 //! large tensors (16MB+ for `seq_len`=2048) on every forward pass.
 //! The cache uses shallow clones (Arc bump, no data copy) for efficiency.
 
 use std::collections::HashMap;
 use std::sync::{LazyLock, Mutex};
 
-use candle_core::{DType, Device, Tensor};
+use candle_core::{DType, Device, DeviceLocation, Tensor};
 
 use crate::error::{MIError, Result};
 
 /// Type alias for the causal mask cache to reduce type complexity.
-type CausalMaskCache = LazyLock<Mutex<HashMap<(usize, usize, DType), Tensor>>>;
+type CausalMaskCache = LazyLock<Mutex<HashMap<(usize, DeviceLocation, DType), Tensor>>>;
 
-/// Cache for causal masks indexed by `(seq_len, device_ordinal, dtype)`.
+/// Cache for causal masks indexed by `(seq_len, device_location, dtype)`.
 ///
 /// Avoids recreating the same mask tensor repeatedly (saves 16MB+ per
-/// forward pass for large sequences).
+/// forward pass for large sequences). Uses `DeviceLocation` as key so
+/// that masks on different GPUs are cached independently.
 static CAUSAL_MASK_CACHE: CausalMaskCache = LazyLock::new(|| Mutex::new(HashMap::new()));
 
-/// Get a numeric device identifier for cache keys.
-///
-/// Note: This simplified approach assumes a single device per type.
-/// For multi-GPU scenarios, consider using device ordinal numbers.
-const fn device_id(device: &Device) -> usize {
-    match device {
-        Device::Cpu => 0,
-        Device::Cuda(_) => 1,
-        Device::Metal(_) => 2,
-    }
-}
-
 /// Type alias for the mask cache guard.
-type CacheGuard = std::sync::MutexGuard<'static, HashMap<(usize, usize, DType), Tensor>>;
+type CacheGuard = std::sync::MutexGuard<'static, HashMap<(usize, DeviceLocation, DType), Tensor>>;
 
 /// Acquire the mask cache lock, mapping poison errors to [`MIError`].
 fn lock_cache() -> Result<CacheGuard> {
@@ -74,7 +63,7 @@ fn lock_cache() -> Result<CacheGuard> {
 /// Returns [`MIError::Model`] if tensor creation fails, or
 /// [`MIError::Hook`] if the cache lock is poisoned.
 pub fn create_causal_mask(seq_len: usize, device: &Device, dtype: DType) -> Result<Tensor> {
-    let cache_key = (seq_len, device_id(device), dtype);
+    let cache_key = (seq_len, device.location(), dtype);
 
     // Try to get from cache first.
     {

@@ -7,6 +7,22 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+### Fixed
+
+- Mask cache now uses `DeviceLocation` as key instead of a collapsed device
+  type ID, making it correct for multi-GPU / multi-Metal processes
+- All 13 transformer hook points now support both capture and intervention
+  (`ResidPre`, `AttnQ`, `AttnK`, `AttnV`, `AttnOut`, `ResidMid`, `MlpPre`,
+  `MlpPost`, `MlpOut`, `FinalNorm` were previously capture-only)
+- `sample_with_temperature()` now returns `MIError::Model("empty logits")`
+  on empty input, matching `argmax()` behaviour (previously returned
+  `u32::MAX` as an invalid token ID)
+- `tests/fast_download.rs` now documents its non-hermetic, network-dependent
+  nature so CI failures are easier to triage
+- `ROADMAP.md` status line updated to v0.0.4 / Phase 3 complete; three
+  implemented items (anacrousis, anacrousis validation, `scripts/README.md`)
+  marked as done
+
 ## [0.0.4] - 2026-03-05
 
 ### Added

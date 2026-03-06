@@ -192,25 +192,34 @@ impl Attention {
         let (q, k, v) = self.qkv.forward(x)?;
 
         // Reshape to [batch, seq, n_heads, head_dim] then transpose to [batch, n_heads, seq, head_dim]
-        let q = q
+        let mut q = q
             .reshape((batch, seq_len, self.num_attention_heads, self.head_dim))?
             .transpose(1, 2)?;
-        let k = k
+        let mut k = k
             .reshape((batch, seq_len, self.num_kv_heads, self.head_dim))?
             .transpose(1, 2)?;
-        let v = v
+        let mut v = v
             .reshape((batch, seq_len, self.num_kv_heads, self.head_dim))?
             .transpose(1, 2)?;
 
-        // Hook: capture Q, K, V after reshape
+        // Hook: capture and/or intervene on Q, K, V after reshape (before RoPE)
         if hooks.is_captured(&HookPoint::AttnQ(layer_idx)) {
             cache.store(HookPoint::AttnQ(layer_idx), q.clone());
+        }
+        for intervention in hooks.interventions_at(&HookPoint::AttnQ(layer_idx)) {
+            q = crate::hooks::apply_intervention(&q, intervention)?;
         }
         if hooks.is_captured(&HookPoint::AttnK(layer_idx)) {
             cache.store(HookPoint::AttnK(layer_idx), k.clone());
         }
+        for intervention in hooks.interventions_at(&HookPoint::AttnK(layer_idx)) {
+            k = crate::hooks::apply_intervention(&k, intervention)?;
+        }
         if hooks.is_captured(&HookPoint::AttnV(layer_idx)) {
             cache.store(HookPoint::AttnV(layer_idx), v.clone());
+        }
+        for intervention in hooks.interventions_at(&HookPoint::AttnV(layer_idx)) {
+            v = crate::hooks::apply_intervention(&v, intervention)?;
         }
 
         // --- Apply RoPE ---
