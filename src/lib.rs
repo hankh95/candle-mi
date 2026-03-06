@@ -71,6 +71,8 @@ pub mod hooks;
 pub mod interp;
 #[cfg(feature = "rwkv")]
 pub mod rwkv;
+#[cfg(feature = "sae")]
+pub mod sae;
 pub mod tokenizer;
 #[cfg(feature = "transformer")]
 pub mod transformer;
@@ -101,8 +103,14 @@ pub use rwkv::{GenericRwkv, RwkvConfig, RwkvLoraDims, RwkvVersion};
 // CLT (Cross-Layer Transcoder)
 #[cfg(feature = "clt")]
 pub use clt::{
-    AttributionEdge, AttributionGraph, CltConfig, CltFeatureId, CrossLayerTranscoder,
+    AttributionEdge, AttributionGraph, CltConfig, CltFeatureId, CrossLayerTranscoder, FeatureId,
     SparseActivations,
+};
+
+// SAE (Sparse Autoencoder)
+#[cfg(feature = "sae")]
+pub use sae::{
+    NormalizeActivations, SaeArchitecture, SaeConfig, SaeFeatureId, SparseAutoencoder, TopKStrategy,
 };
 
 // Cache

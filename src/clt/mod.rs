@@ -60,17 +60,40 @@ impl std::fmt::Display for CltFeatureId {
     }
 }
 
-/// Sparse representation of CLT feature activations.
+/// Marker trait for feature identifiers in sparse activation vectors.
 ///
-/// Only features with non-zero activation (after `ReLU`) are stored,
-/// sorted by activation magnitude in descending order.
-#[derive(Debug, Clone)]
-pub struct SparseActivations {
-    /// Active features with their activation magnitudes, sorted descending.
-    pub features: Vec<(CltFeatureId, f32)>,
+/// Implemented by [`CltFeatureId`] (CLT features with layer + index) and
+/// [`SaeFeatureId`](crate::sae::SaeFeatureId) (SAE features with index only).
+pub trait FeatureId:
+    std::fmt::Debug
+    + Clone
+    + Copy
+    + PartialEq
+    + Eq
+    + PartialOrd
+    + Ord
+    + std::hash::Hash
+    + std::fmt::Display
+{
 }
 
-impl SparseActivations {
+impl FeatureId for CltFeatureId {}
+
+/// Sparse representation of feature activations.
+///
+/// Only features with non-zero activation are stored,
+/// sorted by activation magnitude in descending order.
+///
+/// Generic over the feature identifier type `F`:
+/// - [`CltFeatureId`] for CLT features (layer + index)
+/// - [`SaeFeatureId`](crate::sae::SaeFeatureId) for SAE features (index only)
+#[derive(Debug, Clone)]
+pub struct SparseActivations<F: FeatureId> {
+    /// Active features with their activation magnitudes, sorted descending.
+    pub features: Vec<(F, f32)>,
+}
+
+impl<F: FeatureId> SparseActivations<F> {
     /// Number of active features.
     #[must_use]
     pub const fn len(&self) -> usize {
@@ -526,7 +549,7 @@ impl CrossLayerTranscoder {
     ///
     /// # Shapes
     /// - `residual`: `[d_model]` — residual stream activation at one position
-    /// - returns: [`SparseActivations`] with `(CltFeatureId, f32)` pairs
+    /// - returns: [`SparseActivations<CltFeatureId>`] with `(CltFeatureId, f32)` pairs
     ///
     /// # Requires
     /// [`load_encoder(layer)`](Self::load_encoder) must have been called first.
@@ -535,7 +558,11 @@ impl CrossLayerTranscoder {
     ///
     /// Returns [`MIError::Hook`] if no encoder is loaded or the wrong layer is loaded.
     /// Returns [`MIError::Model`] on tensor operation failure.
-    pub fn encode(&self, residual: &Tensor, layer: usize) -> Result<SparseActivations> {
+    pub fn encode(
+        &self,
+        residual: &Tensor,
+        layer: usize,
+    ) -> Result<SparseActivations<CltFeatureId>> {
         let enc = self.loaded_encoder.as_ref().ok_or_else(|| {
             MIError::Hook(format!(
                 "no encoder loaded — call load_encoder({layer}) first"
@@ -583,7 +610,7 @@ impl CrossLayerTranscoder {
     ///
     /// # Shapes
     /// - `residual`: `[d_model]` — residual stream activation at one position
-    /// - returns: [`SparseActivations`] truncated to at most `k` entries
+    /// - returns: [`SparseActivations<CltFeatureId>`] truncated to at most `k` entries
     ///
     /// # Requires
     /// [`load_encoder(layer)`](Self::load_encoder) must have been called first.
@@ -591,7 +618,12 @@ impl CrossLayerTranscoder {
     /// # Errors
     ///
     /// Same as [`encode()`](Self::encode).
-    pub fn top_k(&self, residual: &Tensor, layer: usize, k: usize) -> Result<SparseActivations> {
+    pub fn top_k(
+        &self,
+        residual: &Tensor,
+        layer: usize,
+        k: usize,
+    ) -> Result<SparseActivations<CltFeatureId>> {
         let mut sparse = self.encode(residual, layer)?;
         sparse.truncate(k);
         Ok(sparse)
