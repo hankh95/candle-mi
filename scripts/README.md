@@ -81,6 +81,18 @@ Requires `transformers`, `torch`, `huggingface_hub`, `numpy`. Outputs `sae_refer
 SAE weights are loaded from `google/gemma-scope-2b-pt-res` (NPZ format),
 the same repo that candle-mi uses via `hf-fetch-model`.
 
+**Rust vs Python results** (Gemma 2 2B, layer 0, width 16k, JumpReLU, prompt "The capital of France is"):
+
+| Metric | Rust | Python | Diff |
+|--------|------|--------|------|
+| Architecture | JumpReLU (auto-detected) | JumpReLU | — |
+| Active features (last pos) | 14 / 16384 | 14 / 16384 | 0 |
+| Top feature | #10492 (44.0694) | #10492 (44.0724) | 0.003 |
+| Top-10 feature indices | 9/10 match | — | 1 diff (#10: Rust 6320 vs Python 688) |
+| Reconstruction MSE | 6.912613 | 6.912656 | 0.000043 |
+| Residual norm | 61.7991 | 61.8125 | 0.0134 |
+| Decoded norm | 59.7376 | 59.7459 | 0.0083 |
+
 **Validation** (candle-mi):
 ```bash
 cargo test --test validate_sae --features sae,transformer -- --ignored --test-threads=1
