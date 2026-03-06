@@ -46,7 +46,7 @@
   - [Phase 1: Generic Transformer](#phase-1-generic-transformer) ✅
   - [Phase 2: RWKV-6 + RWKV-7](#phase-2-rwkv-6--rwkv-7) ✅
   - [Phase 3: CLT Support](#phase-3-clt-support) ✅
-  - [Phase 4: SAE Support](#phase-4-sae-support)
+  - [Phase 4: SAE Support](#phase-4-sae-support) ✅
   - [Phase 5: Polish + Publish + Auto-Config](#phase-5-polish--publish--auto-config)
   - [Phase 6a: Standard MI Analysis Stack](#phase-6a-standard-mi-analysis-stack)
   - [Phase 6b: Static Circuit Analysis](#phase-6b-static-circuit-analysis)
@@ -767,11 +767,11 @@ CI enforces the same three checks on every push. A red CI is treated as a blocki
 
 **Goal:** Load and use pre-trained sparse autoencoders.
 
-- [x] Implement SAE weight loading (SAELens / Gemma Scope format) — **commit**
-- [x] Implement SAE encoding and feature injection — **commit**
-- [x] Validate: load Gemma Scope SAE, encode activations, verify reconstruction — **commit** — **PUSH**
+- [x] Implement SAE weight loading (SAELens / Gemma Scope format) — `ee39a87`
+- [x] Implement SAE encoding and feature injection — `ee39a87`
+- [x] Validate: load Gemma Scope SAE, encode activations, verify reconstruction — `8adefae`, `fd07235`
 
-**Deliverable:** SAE pipeline working alongside CLTs. — **PUSH + tag `v0.0.5-phase4`**
+**Deliverable:** SAE pipeline working alongside CLTs (`ee39a87`..`fa22d1b`). — **PUSH + tag `v0.0.5-phase4`**
 
 ### Phase 5: Polish + Publish + Auto-Config
 

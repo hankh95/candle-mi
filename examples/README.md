@@ -28,6 +28,6 @@ cargo run --release --features sae,transformer --example quick_start_sae
 - **quick_start_transformer** and **quick_start_sae** require models cached
   in `~/.cache/huggingface/hub/`. Download them first with `fast_download`
   or via Python (`huggingface_hub.snapshot_download()`).
-- **quick_start_sae** additionally requires
-  `jbloom/Gemma-2-2B-Residual-Stream-SAEs` cached locally.
+- **quick_start_sae** downloads the Gemma Scope SAE (`google/gemma-scope-2b-pt-res`)
+  automatically via `hf-fetch-model`.
 - GPU (CUDA) is recommended for models larger than 1B parameters.

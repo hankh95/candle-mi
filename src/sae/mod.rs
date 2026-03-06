@@ -2,9 +2,10 @@
 
 //! Sparse Autoencoder (SAE) support.
 //!
-//! Loads pre-trained SAE weights from SAELens-format safetensors + `cfg.json`,
-//! encodes model activations into sparse feature vectors, decodes back to
-//! activation space, and produces steering vectors for injection.
+//! Loads pre-trained SAE weights from SAELens-format safetensors + `cfg.json`
+//! or from Gemma Scope NPZ archives, encodes model activations into sparse
+//! feature vectors, decodes back to activation space, and produces steering
+//! vectors for injection.
 //!
 //! Each SAE targets a single hook point in the model (e.g., `resid_post` at
 //! layer 5). Multiple SAEs can be loaded independently for different hook
@@ -23,18 +24,35 @@
 //! - **`JumpReLU`**: `features = pre_acts * (pre_acts > threshold)`
 //! - **`TopK`**: keep only the top-k pre-activations, zero the rest
 //!
-//! # Weight File Layout (`SAELens` format)
+//! # Weight File Formats
+//!
+//! ## `SAELens` safetensors format
 //!
 //! Each SAE directory contains:
 //! - `cfg.json`: configuration (`d_in`, `d_sae`, architecture, `hook_name`, ...)
 //! - `sae_weights.safetensors` (or `model.safetensors`): weight tensors
 //!
-//! Tensor names in safetensors:
+//! ## Gemma Scope NPZ format
+//!
+//! A single `params.npz` file (`NumPy` ZIP archive) containing:
+//! - `W_enc.npy`: shape `[d_in, d_sae]` — encoder weight matrix
+//! - `W_dec.npy`: shape `[d_sae, d_in]` — decoder weight matrix
+//! - `b_enc.npy`: shape `[d_sae]` — encoder bias
+//! - `b_dec.npy`: shape `[d_in]` — decoder bias
+//! - `threshold.npy`: shape `[d_sae]` — `JumpReLU` threshold (optional)
+//!
+//! Architecture is auto-detected: presence of `threshold` → `JumpReLU`,
+//! otherwise `ReLU`.
+//!
+//! ## Tensor names (both formats)
+//!
 //! - `W_enc`: shape `[d_in, d_sae]` — encoder weight matrix
 //! - `W_dec`: shape `[d_sae, d_in]` — decoder weight matrix
 //! - `b_enc`: shape `[d_sae]` — encoder bias
 //! - `b_dec`: shape `[d_in]` — decoder bias
 //! - `threshold`: shape `[d_sae]` — `JumpReLU` threshold (optional)
+
+pub mod npz;
 
 use std::path::Path;
 
@@ -442,6 +460,152 @@ impl SparseAutoencoder {
             b_dec,
             threshold,
         })
+    }
+
+    /// Load an SAE from a Gemma Scope NPZ file (`params.npz`).
+    ///
+    /// The NPZ file must contain `W_enc`, `W_dec`, `b_enc`, `b_dec` arrays,
+    /// and optionally `threshold` (for `JumpReLU`). Config is inferred from
+    /// tensor shapes since NPZ files have no `cfg.json`.
+    ///
+    /// # Arguments
+    /// * `npz_path` — Path to the `params.npz` file
+    /// * `hook_layer` — Which model layer this SAE hooks into
+    /// * `device` — Target device (CPU or CUDA)
+    ///
+    /// # Errors
+    ///
+    /// Returns [`MIError::Config`] if required tensors are missing or shapes
+    /// are inconsistent.
+    /// Returns [`MIError::Io`] if the file cannot be read.
+    pub fn from_npz(npz_path: &Path, hook_layer: usize, device: &Device) -> Result<Self> {
+        info!("Loading SAE from NPZ: {}", npz_path.display());
+        let tensors = npz::load_npz(npz_path, device)?;
+
+        let w_enc = tensors
+            .get("W_enc")
+            .ok_or_else(|| MIError::Config("NPZ missing W_enc".into()))?
+            .to_dtype(DType::F32)?;
+        let w_dec = tensors
+            .get("W_dec")
+            .ok_or_else(|| MIError::Config("NPZ missing W_dec".into()))?
+            .to_dtype(DType::F32)?;
+        let b_enc = tensors
+            .get("b_enc")
+            .ok_or_else(|| MIError::Config("NPZ missing b_enc".into()))?
+            .to_dtype(DType::F32)?;
+        let b_dec = tensors
+            .get("b_dec")
+            .ok_or_else(|| MIError::Config("NPZ missing b_dec".into()))?
+            .to_dtype(DType::F32)?;
+        let threshold = tensors
+            .get("threshold")
+            .map(|t| t.to_dtype(DType::F32))
+            .transpose()?;
+
+        // Infer dimensions from W_enc: [d_in, d_sae].
+        let w_enc_dims = w_enc.dims();
+        if w_enc_dims.len() != 2 {
+            return Err(MIError::Config(format!(
+                "W_enc expected 2 dims, got {}",
+                w_enc_dims.len()
+            )));
+        }
+        let d_in = *w_enc_dims
+            .first()
+            .ok_or_else(|| MIError::Config("W_enc has no dimensions".into()))?;
+        let d_sae = *w_enc_dims
+            .get(1)
+            .ok_or_else(|| MIError::Config("W_enc has no second dimension".into()))?;
+
+        // Validate shapes.
+        validate_shape(&w_enc, &[d_in, d_sae], "W_enc")?;
+        validate_shape(&w_dec, &[d_sae, d_in], "W_dec")?;
+        validate_shape(&b_enc, &[d_sae], "b_enc")?;
+        validate_shape(&b_dec, &[d_in], "b_dec")?;
+        if let Some(ref t) = threshold {
+            validate_shape(t, &[d_sae], "threshold")?;
+        }
+
+        // Auto-detect architecture: threshold present → JumpReLU, else ReLU.
+        let architecture = if threshold.is_some() {
+            SaeArchitecture::JumpReLU
+        } else {
+            SaeArchitecture::ReLU
+        };
+
+        let hook_name = format!("blocks.{hook_layer}.hook_resid_post");
+        let hook_point = hook_name
+            .parse::<HookPoint>()
+            .map_err(|e| MIError::Config(format!("failed to parse hook name: {e}")))?;
+
+        let config = SaeConfig {
+            d_in,
+            d_sae,
+            architecture,
+            hook_name,
+            hook_point,
+            apply_b_dec_to_input: false,
+            normalize_activations: NormalizeActivations::None,
+        };
+
+        info!(
+            "SAE from NPZ: d_in={d_in}, d_sae={d_sae}, arch={:?}, hook={}",
+            config.architecture, config.hook_name
+        );
+
+        Ok(Self {
+            config,
+            w_enc,
+            w_dec,
+            b_enc,
+            b_dec,
+            threshold,
+        })
+    }
+
+    /// Load an SAE from a `HuggingFace` repository containing an NPZ file.
+    ///
+    /// Downloads the NPZ file via `hf-fetch-model`, then delegates to
+    /// [`from_npz`](Self::from_npz).
+    ///
+    /// # Arguments
+    /// * `repo_id` — `HuggingFace` repository ID
+    ///   (e.g., `"google/gemma-scope-2b-pt-res"`)
+    /// * `npz_path` — Path within the repo to the NPZ file
+    ///   (e.g., `"layer_0/width_16k/average_l0_105/params.npz"`)
+    /// * `hook_layer` — Which model layer this SAE hooks into
+    /// * `device` — Target device (CPU or CUDA)
+    ///
+    /// # Errors
+    ///
+    /// Returns [`MIError::Download`] if the file cannot be fetched.
+    /// Returns [`MIError::Config`] if the NPZ format is invalid.
+    pub fn from_pretrained_npz(
+        repo_id: &str,
+        npz_path: &str,
+        hook_layer: usize,
+        device: &Device,
+    ) -> Result<Self> {
+        let fetch_config = hf_fetch_model::FetchConfig::builder()
+            .on_progress(|event| {
+                tracing::info!(
+                    filename = %event.filename,
+                    percent = event.percent,
+                    bytes_downloaded = event.bytes_downloaded,
+                    bytes_total = event.bytes_total,
+                    "SAE NPZ download progress",
+                );
+            })
+            .build()
+            .map_err(|e| MIError::Download(format!("failed to build fetch config: {e}")))?;
+
+        info!("Downloading {npz_path} from {repo_id}");
+        let local_path =
+            hf_fetch_model::download_file_blocking(repo_id.to_owned(), npz_path, &fetch_config)
+                .map_err(|e| MIError::Download(format!("failed to download NPZ: {e}")))?;
+
+        Self::from_npz(&local_path, hook_layer, device)
     }
 
     /// Load an SAE from a `HuggingFace` repository.

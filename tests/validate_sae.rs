@@ -4,7 +4,7 @@
 //!
 //! Requires cached in `~/.cache/huggingface/hub/`:
 //! - `google/gemma-2-2b`
-//! - `jbloom/Gemma-2-2B-Residual-Stream-SAEs`
+//! - `google/gemma-scope-2b-pt-res` (downloaded automatically via `hf-fetch-model`)
 //!
 //! Tests are `#[ignore]`-gated and require a CUDA GPU with **at least 16 GiB VRAM**.
 //!
@@ -109,8 +109,8 @@ fn load_gemma2(device: &Device) -> (GenericTransformer, MITokenizer, Transformer
 // SAE constants
 // ---------------------------------------------------------------------------
 
-const SAE_REPO: &str = "jbloom/Gemma-2-2B-Residual-Stream-SAEs";
-const SAE_ID: &str = "gemma-2-2b-res-jb/blocks.0.hook_resid_post";
+const SAE_REPO: &str = "google/gemma-scope-2b-pt-res";
+const SAE_NPZ: &str = "layer_0/width_16k/average_l0_105/params.npz";
 const HOOK_LAYER: usize = 0;
 
 // ===========================================================================
@@ -122,7 +122,7 @@ const HOOK_LAYER: usize = 0;
 #[serial]
 fn sae_load_detects_config() {
     let device = Device::Cpu;
-    let sae = SparseAutoencoder::from_pretrained(SAE_REPO, SAE_ID, &device).unwrap();
+    let sae = SparseAutoencoder::from_pretrained_npz(SAE_REPO, SAE_NPZ, HOOK_LAYER, &device).unwrap();
     let cfg = sae.config();
 
     assert_eq!(cfg.d_in, 2304, "Gemma 2 2B hidden dim is 2304");
@@ -169,14 +169,14 @@ fn sae_encode_gemma2_residuals() {
     println!("resid_post shape: {:?}", resid_post.dims());
 
     // Load SAE.
-    let sae = SparseAutoencoder::from_pretrained(SAE_REPO, SAE_ID, &device).unwrap();
+    let sae = SparseAutoencoder::from_pretrained_npz(SAE_REPO, SAE_NPZ, HOOK_LAYER, &device).unwrap();
     assert_eq!(sae.d_in(), 2304);
 
     // --- Dense encode ---
     let encoded = sae.encode(resid_post).unwrap(); // [1, seq, 16384]
     assert_eq!(encoded.dims(), &[1, seq_len, 16384]);
 
-    // Check sparsity: most values should be zero (ReLU activation).
+    // Check sparsity: most values should be zero (JumpReLU activation).
     let encoded_last = encoded.i((0, seq_len - 1)).unwrap(); // [16384]
     let values: Vec<f32> = encoded_last.to_vec1().unwrap();
     let n_active = values.iter().filter(|&&v| v > 0.0).count();
@@ -193,10 +193,10 @@ fn sae_encode_gemma2_residuals() {
     );
     assert!(n_active > 0, "SAE should have at least one active feature");
 
-    // All activations should be non-negative (ReLU).
+    // All activations should be non-negative (ReLU/JumpReLU).
     assert!(
         values.iter().all(|&v| v >= 0.0),
-        "ReLU SAE should produce non-negative activations"
+        "SAE should produce non-negative activations"
     );
 
     // --- Sparse encode (single position) ---
@@ -342,7 +342,7 @@ fn sae_injection_shifts_logits() {
         .unwrap();
     let resid_last = resid_post.i((0, seq_len - 1)).unwrap();
 
-    let sae = SparseAutoencoder::from_pretrained(SAE_REPO, SAE_ID, &device).unwrap();
+    let sae = SparseAutoencoder::from_pretrained_npz(SAE_REPO, SAE_NPZ, HOOK_LAYER, &device).unwrap();
     let sparse = sae.encode_sparse(&resid_last).unwrap();
 
     assert!(
@@ -446,7 +446,7 @@ fn sae_vs_python_reference() {
     let resid_post = result.require(&HookPoint::ResidPost(hook_layer)).unwrap();
 
     // Load SAE.
-    let sae = SparseAutoencoder::from_pretrained(SAE_REPO, SAE_ID, &device).unwrap();
+    let sae = SparseAutoencoder::from_pretrained_npz(SAE_REPO, SAE_NPZ, HOOK_LAYER, &device).unwrap();
     assert_eq!(sae.d_in(), py_d_in, "d_in mismatch");
     assert_eq!(sae.d_sae(), py_d_sae, "d_sae mismatch");
 

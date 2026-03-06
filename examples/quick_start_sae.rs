@@ -15,8 +15,9 @@
 //! 4. Encodes the last-token residual into sparse features.
 //! 5. Prints the top-10 active features and reconstruction MSE.
 //!
-//! Requires both `google/gemma-2-2b` and
-//! `jbloom/Gemma-2-2B-Residual-Stream-SAEs` cached locally.
+//! Requires `google/gemma-2-2b` cached locally. The Gemma Scope SAE
+//! (`google/gemma-scope-2b-pt-res`) is downloaded automatically via
+//! `hf-fetch-model`.
 
 use candle_core::{DType, Device, IndexOp};
 use candle_mi::sae::SparseAutoencoder;
@@ -60,10 +61,11 @@ fn run() -> candle_mi::Result<()> {
         model.hidden_size()
     );
 
-    // --- Load SAE ---
-    let sae = SparseAutoencoder::from_pretrained(
-        "jbloom/Gemma-2-2B-Residual-Stream-SAEs",
-        "gemma-2-2b-res-jb/blocks.0.hook_resid_post",
+    // --- Load SAE (Gemma Scope, NPZ format) ---
+    let sae = SparseAutoencoder::from_pretrained_npz(
+        "google/gemma-scope-2b-pt-res",
+        "layer_0/width_16k/average_l0_105/params.npz",
+        0, // hook_layer
         &device,
     )?;
     println!(
