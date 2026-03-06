@@ -7,6 +7,31 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+### Added
+
+- **Sparse Autoencoder (SAE) support** — `SparseAutoencoder` struct with
+  `SaeConfig`, `SaeFeatureId`, `SaeArchitecture`, `NormalizeActivations`, and
+  `TopKStrategy` types; loading SAELens-format safetensors + `cfg.json` from
+  local directories or HuggingFace repositories (e.g.
+  `jbloom/Gemma-2-2B-Residual-Stream-SAEs`); three architecture variants:
+  ReLU, JumpReLU (learned threshold per feature), and TopK (keep only k
+  largest activations with auto-detected CPU/GPU dual-path)
+- **SAE encoding and decoding** — `encode()` for batched dense encoding,
+  `encode_sparse()` for single-position sparse features sorted by magnitude,
+  `decode()` for reconstruction, `reconstruct()` and `reconstruction_error()`
+  for round-trip analysis; `encode_with_strategy()` for explicit TopK
+  strategy override
+- **SAE feature injection** — `decoder_vector()` to extract individual
+  feature steering directions, `prepare_hook_injection()` to build
+  `HookSpec` entries for additive interventions at the SAE's hook point
+- **Generic `SparseActivations<F: FeatureId>`** — refactored from CLT-only
+  to a generic sparse representation shared between CLT and SAE; `FeatureId`
+  marker trait implemented by both `CltFeatureId` and `SaeFeatureId`
+- Python validation script (`scripts/sae_validation.py`) for SAELens
+  reference output generation; integration tests (`tests/validate_sae.rs`)
+  with 4 test cases: config detection, encode/decode/sparse, injection, and
+  Python reference comparison; `quick_start_sae` example
+
 ### Fixed
 
 - Mask cache now uses `DeviceLocation` as key instead of a collapsed device

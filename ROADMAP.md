@@ -3,7 +3,7 @@
 > *MI for the Rust of us*
 
 **Date:** February 19, 2026 (last updated: March 6, 2026)
-**Status:** Phase 0 + Phase 1 + Phase 2 + Phase 3 complete. Published on [crates.io](https://crates.io/crates/candle-mi) as v0.0.4. Default dtype changed to F32 for research-grade precision.
+**Status:** Phase 0 + Phase 1 + Phase 2 + Phase 3 + Phase 4 complete. Published on [crates.io](https://crates.io/crates/candle-mi) as v0.0.4. Default dtype changed to F32 for research-grade precision.
 **Context:** Building on plip-rs experience (7 model backends incl. Gemma 2, attention knockout, state knockout, effective attention, steering, logit lens, CLT encoding/injection). Two successful replications of Anthropic's "Planning in Poems" Figure 13 validate the approach: Gemma 2 2B with 426K CLTs (melometis branch) and Llama 3.2 1B with 524K CLTs (tragos branch). Target: a publishable, generic Rust MI crate endorsed by HuggingFace.
 
 ---
@@ -761,15 +761,15 @@ CI enforces the same three checks on every push. A red CI is treated as a blocki
 - [x] Validate: replicate anacrousis results (28 conditions × 15 couplets; best 11/15 with unembed layers 8–15, scale 2.0) — `tests/validate_anacrousis.rs` (`#[ignore]`, requires CUDA + cached model) — **commit** — **PUSH** (anacrousis green)
 - [x] Add `scripts/README.md` documenting validation scripts, reference data files, and regeneration instructions — **commit**
 
-**Deliverable:** Full CLT pipeline on Gemma 2 2B and Llama 3.2 1B, plus anacrousis recurrent feedback experiment. — **PUSH + tag `v0.0.4-phase3`** ✅ Published to [crates.io](https://crates.io/crates/candle-mi) on 2026-03-05.
+**Deliverable:** Full CLT pipeline on Gemma 2 2B and Llama 3.2 1B, plus anacrousis recurrent feedback experiment. — **PUSH + tag `v0.0.4-phase3`** ✅ Published to [crates.io](https://crates.io/crates/candle-mi) on 2026-03-05 — **commit `8acfa53`**.
 
 ### Phase 4: SAE Support
 
 **Goal:** Load and use pre-trained sparse autoencoders.
 
-- [ ] Implement SAE weight loading (SAELens / Gemma Scope format) — **commit**
-- [ ] Implement SAE encoding and feature injection — **commit**
-- [ ] Validate: load Gemma Scope SAE, encode activations, verify reconstruction — **commit** — **PUSH**
+- [x] Implement SAE weight loading (SAELens / Gemma Scope format) — **commit**
+- [x] Implement SAE encoding and feature injection — **commit**
+- [x] Validate: load Gemma Scope SAE, encode activations, verify reconstruction — **commit** — **PUSH**
 
 **Deliverable:** SAE pipeline working alongside CLTs. — **PUSH + tag `v0.0.5-phase4`**
 
