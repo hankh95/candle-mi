@@ -24,6 +24,8 @@
 //! ```
 
 use std::fmt;
+use std::io::Read as _;
+use std::path::Path;
 
 use serde_json::Value;
 
@@ -236,7 +238,7 @@ impl fmt::Display for MlpLayout {
 ///
 /// **Mistral** — reads `sliding_window` (default `None`).  Otherwise
 /// identical to `LLaMA`; `max_position_embeddings` defaults to 32 768.
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq)]
 #[allow(clippy::struct_excessive_bools)] // Config structs legitimately have many boolean axes
 pub struct TransformerConfig {
     // --- Dimensions ----------------------------------------------------------
@@ -739,6 +741,269 @@ pub(crate) fn get_head_dim(
             "num_attention_heads is 0, cannot compute head_dim".into(),
         )),
         None => Ok(hidden_size / num_attention_heads),
+    }
+}
+
+// ---------------------------------------------------------------------------
+// Activation string parsing
+// ---------------------------------------------------------------------------
+
+/// Infer [`Activation`] from `hidden_activation` or `hidden_act` config fields.
+///
+/// Prefers `hidden_activation` (used by Gemma 2) over `hidden_act`.
+/// Defaults to [`Activation::Silu`] when neither field is present.
+fn parse_activation_str(config: &Value) -> Activation {
+    let act_str = config
+        .get("hidden_activation")
+        .or_else(|| config.get("hidden_act"))
+        .and_then(Value::as_str);
+    match act_str {
+        Some("gelu_pytorch_tanh") => Activation::GeluApprox,
+        Some("gelu") => Activation::Gelu,
+        _ => Activation::Silu,
+    }
+}
+
+// ---------------------------------------------------------------------------
+// Tensor name utilities
+// ---------------------------------------------------------------------------
+
+/// Extract tensor names from a single `.safetensors` file header.
+///
+/// Reads only the JSON header (first 8 bytes = length, then header bytes);
+/// no weight data is loaded.
+///
+/// # Errors
+///
+/// Returns [`MIError::Io`] on read failure, [`MIError::Config`] if the
+/// header is malformed.
+pub fn tensor_names_from_safetensors(path: &Path) -> Result<Vec<String>> {
+    let mut file = std::fs::File::open(path)?;
+    let mut len_buf = [0u8; 8];
+    file.read_exact(&mut len_buf)?;
+    let header_len = u64::from_le_bytes(len_buf);
+    let header_len = usize::try_from(header_len)
+        .map_err(|_| MIError::Config("safetensors header length overflows usize".into()))?;
+    let mut header_buf = vec![0u8; header_len];
+    file.read_exact(&mut header_buf)?;
+    let header: Value = serde_json::from_slice(&header_buf)
+        .map_err(|e| MIError::Config(format!("failed to parse safetensors header: {e}")))?;
+    let obj = header
+        .as_object()
+        .ok_or_else(|| MIError::Config("safetensors header is not a JSON object".into()))?;
+    Ok(obj
+        .keys()
+        .filter(|k| *k != "__metadata__")
+        .cloned()
+        .collect())
+}
+
+/// Extract tensor names from a `model.safetensors.index.json` index file.
+///
+/// Reads the `weight_map` keys from the sharded model index.
+///
+/// # Errors
+///
+/// Returns [`MIError::Io`] on read failure, [`MIError::Config`] if the
+/// index is malformed or missing `weight_map`.
+pub fn tensor_names_from_index(path: &Path) -> Result<Vec<String>> {
+    let content = std::fs::read_to_string(path)?;
+    let index: Value = serde_json::from_str(&content)
+        .map_err(|e| MIError::Config(format!("failed to parse safetensors index: {e}")))?;
+    let weight_map = index
+        .get("weight_map")
+        .and_then(Value::as_object)
+        .ok_or_else(|| MIError::Config("missing 'weight_map' in safetensors index".into()))?;
+    Ok(weight_map.keys().cloned().collect())
+}
+
+// ---------------------------------------------------------------------------
+// Auto-config: generic parser for unknown model families
+// ---------------------------------------------------------------------------
+
+impl TransformerConfig {
+    /// Parse a [`TransformerConfig`] from a `HuggingFace` `config.json` value
+    /// and safetensors tensor names.
+    ///
+    /// Two-tier dispatch:
+    /// - **Known families** (listed in [`SUPPORTED_MODEL_TYPES`]): delegates to
+    ///   the existing manually-validated parser via [`from_hf_config`](Self::from_hf_config).
+    /// - **Unknown families**: auto-detects architecture axes from `config.json`
+    ///   scalars and safetensors tensor names (QKV/MLP layout, bias flags, norm
+    ///   type, post-norms), with `model_type`-based fixups for Gemma-family
+    ///   traits.
+    ///
+    /// `tensor_names` should contain all tensor names from the model's
+    /// safetensors file(s).  Use [`tensor_names_from_safetensors`] or
+    /// [`tensor_names_from_index`] to obtain them without loading weights.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`MIError::Config`] if `model_type` is missing or if required
+    /// dimension fields are absent.
+    pub fn from_hf_config_auto(config: &Value, tensor_names: &[String]) -> Result<Self> {
+        let model_type = config
+            .get("model_type")
+            .and_then(Value::as_str)
+            .ok_or_else(|| MIError::Config("missing 'model_type' field".into()))?;
+
+        // Known families: use existing manually-validated parsers
+        if SUPPORTED_MODEL_TYPES.contains(&model_type) {
+            return Self::from_hf_config(config);
+        }
+
+        // Unknown families: auto-detect from config.json + tensor names
+        Self::parse_auto(config, tensor_names, model_type)
+    }
+
+    /// Auto-detect a [`TransformerConfig`] from `config.json` scalars and
+    /// safetensors tensor names.
+    ///
+    /// Uses a four-tier inference strategy:
+    /// 1. Required scalars from `config.json`
+    /// 2. Optional scalars from `config.json` with sensible defaults
+    /// 3. Architecture axes inferred from layer-0 tensor names
+    /// 4. `model_type`-based fixups (Gemma `RmsNorm`, embedding scale)
+    ///
+    /// # Errors
+    ///
+    /// Returns [`MIError::Config`] if required dimension fields are missing.
+    #[allow(clippy::cast_precision_loss, clippy::as_conversions)]
+    fn parse_auto(config: &Value, tensor_names: &[String], model_type: &str) -> Result<Self> {
+        // Helper: check if a tensor matching `layers.0.<suffix>` exists
+        let has_layer0 = |suffix: &str| {
+            tensor_names
+                .iter()
+                .any(|n| n.contains("layers.0.") && n.ends_with(suffix))
+        };
+
+        // --- Tier 1: Required scalars ---
+        let hidden_size = get_usize(config, "hidden_size")?;
+        let num_attention_heads = get_usize(config, "num_attention_heads")?;
+
+        // --- Tier 2: Optional scalars ---
+        let norm_eps = config
+            .get("rms_norm_eps")
+            .and_then(Value::as_f64)
+            .or_else(|| config.get("norm_epsilon").and_then(Value::as_f64))
+            .unwrap_or(1e-5);
+
+        let activation = parse_activation_str(config);
+
+        // Sliding window: respect `use_sliding_window: false` (Qwen2)
+        let sliding_window =
+            if config.get("use_sliding_window").and_then(Value::as_bool) == Some(false) {
+                None
+            } else {
+                get_optional_usize(config, "sliding_window")
+            };
+
+        // tie_word_embeddings: config.json field, fallback to tensor name check
+        let tie_word_embeddings = config
+            .get("tie_word_embeddings")
+            .and_then(Value::as_bool)
+            .unwrap_or_else(|| !tensor_names.iter().any(|n| n == "lm_head.weight"));
+
+        // Gemma 2 extensions (Tier 2 — read from config.json if present)
+        let attn_logit_softcapping = get_optional_f64(config, "attn_logit_softcapping");
+        let final_logit_softcapping = get_optional_f64(config, "final_logit_softcapping");
+        let query_pre_attn_scalar = get_optional_f64(config, "query_pre_attn_scalar");
+
+        // --- Tier 3: Tensor name inference ---
+
+        // QKV layout
+        let qkv_layout = if has_layer0("self_attn.qkv_proj.weight") {
+            QkvLayout::Fused
+        } else {
+            QkvLayout::Separate
+        };
+
+        // MLP layout
+        let mlp_layout = if has_layer0("mlp.gate_up_proj.weight") {
+            MlpLayout::GatedFused
+        } else if has_layer0("mlp.gate_proj.weight") {
+            MlpLayout::GatedSeparate
+        } else if has_layer0("mlp.c_fc.weight") {
+            MlpLayout::Plain
+        } else {
+            MlpLayout::GatedSeparate // safest default for decoder-only transformers
+        };
+
+        // Bias flags
+        let qkv_bias = has_layer0("self_attn.q_proj.bias") || has_layer0("self_attn.qkv_proj.bias");
+        let o_proj_bias = has_layer0("self_attn.o_proj.bias");
+        let mlp_bias = has_layer0("mlp.down_proj.bias")
+            || has_layer0("mlp.c_fc.bias")
+            || has_layer0("mlp.gate_proj.bias")
+            || has_layer0("mlp.gate_up_proj.bias");
+
+        // Norm type: LayerNorm if norm layers have bias tensors
+        let has_norm_bias = has_layer0("input_layernorm.bias");
+        let base_norm_type = if has_norm_bias {
+            NormType::LayerNorm
+        } else {
+            NormType::RmsNorm
+        };
+
+        // Post-norms (4-norm layers, Gemma 2 style)
+        let use_post_norms = has_layer0("post_feedforward_layernorm.weight")
+            || has_layer0("pre_feedforward_layernorm.weight");
+
+        // --- Tier 4: model_type fixups ---
+        let is_gemma = model_type.contains("gemma");
+
+        let norm_type = if is_gemma {
+            NormType::GemmaRmsNorm
+        } else {
+            base_norm_type
+        };
+
+        // PROMOTE: embedding scale is sqrt(hidden_size); precision loss negligible for d_model <= 2^52
+        let embedding_scale = if is_gemma {
+            Some((hidden_size as f64).sqrt())
+        } else {
+            None
+        };
+
+        let alternating_sliding_window = is_gemma && use_post_norms;
+
+        // Gemma 2-like models default query_pre_attn_scalar to 256
+        let query_pre_attn_scalar = if is_gemma && use_post_norms {
+            query_pre_attn_scalar.or(Some(256.0))
+        } else {
+            query_pre_attn_scalar
+        };
+
+        Ok(Self {
+            hidden_size,
+            num_layers: get_usize(config, "num_hidden_layers")?,
+            num_attention_heads,
+            num_kv_heads: get_usize_or(config, "num_key_value_heads", num_attention_heads),
+            head_dim: get_head_dim(config, hidden_size, num_attention_heads)?,
+            intermediate_size: get_usize(config, "intermediate_size")?,
+            vocab_size: get_usize(config, "vocab_size")?,
+
+            norm_type,
+            norm_eps,
+            activation,
+            qkv_layout,
+            mlp_layout,
+            qkv_bias,
+            o_proj_bias,
+            mlp_bias,
+            embedding_scale,
+            tie_word_embeddings,
+
+            rope_theta: get_f64_or(config, "rope_theta", 10_000.0),
+            max_position_embeddings: get_usize_or(config, "max_position_embeddings", 4096),
+
+            attn_logit_softcapping,
+            final_logit_softcapping,
+            query_pre_attn_scalar,
+            use_post_norms,
+            sliding_window,
+            alternating_sliding_window,
+        })
     }
 }
 

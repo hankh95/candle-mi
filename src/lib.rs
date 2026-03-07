@@ -86,6 +86,7 @@ pub use backend::{GenerationResult, MIBackend, MIModel, sample_token};
 // Config
 pub use config::{
     Activation, MlpLayout, NormType, QkvLayout, SUPPORTED_MODEL_TYPES, TransformerConfig,
+    tensor_names_from_index, tensor_names_from_safetensors,
 };
 
 // Transformer backend
