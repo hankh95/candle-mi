@@ -156,6 +156,7 @@ impl LogitLensAnalysis {
 /// assert_eq!(preds.len(), 2);
 /// assert_eq!(preds[0].token, "token_42");
 /// ```
+#[must_use]
 pub fn decode_predictions_with(
     predictions: &[(u32, f32)],
     decode_fn: impl Fn(u32) -> String,

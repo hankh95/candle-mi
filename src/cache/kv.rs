@@ -68,6 +68,7 @@ impl KVCache {
     }
 
     /// Whether the cache is empty (no layers have been populated).
+    #[must_use]
     pub fn is_empty(&self) -> bool {
         self.keys.iter().all(Option::is_none)
     }
@@ -113,6 +114,7 @@ impl KVCache {
     /// Estimate memory usage in bytes.
     ///
     /// Returns the total memory used by all cached tensors.
+    #[must_use]
     pub fn memory_usage(&self) -> usize {
         let key_mem: usize = self
             .keys

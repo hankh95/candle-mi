@@ -55,6 +55,7 @@ impl MITokenizer {
     }
 
     /// Wrap an already-loaded `HuggingFace` tokenizer.
+    #[must_use]
     pub fn from_hf(tokenizer: tokenizers::Tokenizer) -> Self {
         Self::HuggingFace(Box::new(tokenizer))
     }
