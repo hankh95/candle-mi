@@ -182,8 +182,24 @@ impl MIModel {
                 let rwkv = GenericRwkv::load(config, &device, dtype, vb)?;
                 Ok(Self::new(Box::new(rwkv), device))
             }
+            #[cfg(feature = "transformer")]
+            _unknown => {
+                use crate::config::TransformerConfig;
+                use crate::transformer::GenericTransformer;
+
+                // Extract tensor names for auto-config inference
+                let tensor_names = extract_tensor_names(&files)?;
+
+                // Preflight: check compatibility before attempting to load
+                TransformerConfig::check_auto_compatibility(&json, &tensor_names).into_result()?;
+
+                let config = TransformerConfig::from_hf_config_auto(&json, &tensor_names)?;
+                let transformer = GenericTransformer::load(config, &device, dtype, vb)?;
+                Ok(Self::new(Box::new(transformer), device))
+            }
+            #[cfg(not(feature = "transformer"))]
             other => Err(MIError::Config(format!(
-                "unsupported model_type: '{other}'"
+                "unsupported model_type: '{other}' (enable the `transformer` feature for auto-config)"
             ))),
         }
     }
@@ -380,6 +396,25 @@ pub struct GenerationResult {
 struct SafetensorsIndex {
     /// Maps weight name → shard filename.
     weight_map: std::collections::HashMap<String, String>,
+}
+
+/// Extract tensor names from a downloaded file map for auto-config inference.
+///
+/// Tries `model.safetensors.index.json` first (sharded models), falls back
+/// to reading the header of `model.safetensors` (single-file models).
+#[cfg(feature = "transformer")]
+fn extract_tensor_names(
+    files: &std::collections::HashMap<String, std::path::PathBuf>,
+) -> Result<Vec<String>> {
+    if let Some(index_path) = files.get("model.safetensors.index.json") {
+        return crate::config::tensor_names_from_index(index_path);
+    }
+    if let Some(st_path) = files.get("model.safetensors") {
+        return crate::config::tensor_names_from_safetensors(st_path);
+    }
+    Err(MIError::Config(
+        "no safetensors files found for tensor name extraction".into(),
+    ))
 }
 
 /// Resolve safetensors file paths from a downloaded file map.

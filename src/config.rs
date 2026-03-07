@@ -1008,6 +1008,178 @@ impl TransformerConfig {
 }
 
 // ---------------------------------------------------------------------------
+// Auto-config compatibility check
+// ---------------------------------------------------------------------------
+
+/// Result of a compatibility check for auto-config loading.
+///
+/// Returned by [`TransformerConfig::check_auto_compatibility`].
+#[derive(Debug, Clone)]
+pub struct CompatibilityReport {
+    /// Whether the model is loadable by `GenericTransformer`.
+    pub compatible: bool,
+    /// Human-readable issues found (empty if compatible).
+    pub issues: Vec<String>,
+}
+
+impl CompatibilityReport {
+    /// Returns `Ok(())` if compatible, or [`MIError::Config`] with a
+    /// diagnostic summary of all issues.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`MIError::Config`] listing all detected incompatibilities.
+    pub fn into_result(self) -> Result<()> {
+        if self.compatible {
+            Ok(())
+        } else {
+            Err(MIError::Config(format!(
+                "model is not compatible with GenericTransformer:\n  - {}",
+                self.issues.join("\n  - ")
+            )))
+        }
+    }
+}
+
+impl TransformerConfig {
+    /// Check whether `config.json` contains the required fields for auto-config.
+    ///
+    /// This is a lightweight check that does not require tensor names or
+    /// downloading weights.  It validates that the five required scalar
+    /// fields (`hidden_size`, `num_hidden_layers`, `num_attention_heads`,
+    /// `intermediate_size`, `vocab_size`) are present.
+    ///
+    /// A passing check does **not** guarantee full compatibility — use
+    /// [`check_auto_compatibility`](Self::check_auto_compatibility) with
+    /// tensor names for a definitive answer.
+    #[must_use]
+    pub fn check_config_fields(config: &Value) -> CompatibilityReport {
+        let required = [
+            "hidden_size",
+            "num_hidden_layers",
+            "num_attention_heads",
+            "intermediate_size",
+            "vocab_size",
+        ];
+        let mut issues = Vec::new();
+        for key in &required {
+            if config.get(*key).and_then(Value::as_u64).is_none() {
+                issues.push(format!("missing or invalid required field '{key}'"));
+            }
+        }
+        CompatibilityReport {
+            compatible: issues.is_empty(),
+            issues,
+        }
+    }
+
+    /// Check whether a model is fully compatible with `GenericTransformer`
+    /// auto-config loading.
+    ///
+    /// Validates both `config.json` fields and safetensors tensor names
+    /// against the patterns `GenericTransformer::load()` expects.  Call
+    /// this after downloading but before loading to get a clear diagnostic
+    /// instead of a cryptic "tensor not found" error.
+    ///
+    /// Checks performed:
+    /// - Required `config.json` scalars are present
+    /// - Embedding tensor (`model.embed_tokens.weight`) exists
+    /// - Layer-0 normalization tensors exist (`input_layernorm.weight`,
+    ///   `post_attention_layernorm.weight`)
+    /// - Final norm tensor (`model.norm.weight`) exists
+    /// - At least one recognized attention projection pattern
+    /// - At least one recognized MLP projection pattern
+    /// - `lm_head.weight` exists when `tie_word_embeddings` is false
+    #[must_use]
+    pub fn check_auto_compatibility(
+        config: &Value,
+        tensor_names: &[String],
+    ) -> CompatibilityReport {
+        let mut issues = Vec::new();
+
+        // --- Config field checks ---
+        let field_report = Self::check_config_fields(config);
+        issues.extend(field_report.issues);
+
+        // Helper: check if a tensor name exists
+        let has = |name: &str| tensor_names.iter().any(|n| n == name);
+        let has_layer0 = |suffix: &str| {
+            tensor_names
+                .iter()
+                .any(|n| n.contains("layers.0.") && n.ends_with(suffix))
+        };
+
+        // --- Embedding ---
+        if !has("model.embed_tokens.weight") {
+            issues.push("missing embedding tensor 'model.embed_tokens.weight'".into());
+        }
+
+        // --- Layer-0 normalization ---
+        if !has_layer0("input_layernorm.weight") {
+            issues.push(
+                "missing normalization tensor 'model.layers.0.input_layernorm.weight' \
+                 (model may use non-parametric norms, which are not yet supported)"
+                    .into(),
+            );
+        }
+        if !has_layer0("post_attention_layernorm.weight")
+            && !has_layer0("pre_feedforward_layernorm.weight")
+        {
+            issues.push(
+                "missing normalization tensor 'model.layers.0.post_attention_layernorm.weight' \
+                 (model may use non-parametric norms, which are not yet supported)"
+                    .into(),
+            );
+        }
+
+        // --- Final norm ---
+        if !has("model.norm.weight") {
+            issues.push("missing final norm tensor 'model.norm.weight'".into());
+        }
+
+        // --- Attention projections ---
+        let has_separate_attn = has_layer0("self_attn.q_proj.weight");
+        let has_fused_attn = has_layer0("self_attn.qkv_proj.weight");
+        if !has_separate_attn && !has_fused_attn {
+            issues.push(
+                "missing attention projections: expected 'self_attn.q_proj.weight' \
+                 or 'self_attn.qkv_proj.weight'"
+                    .into(),
+            );
+        }
+
+        // --- MLP projections ---
+        let has_gated_separate = has_layer0("mlp.gate_proj.weight");
+        let has_gated_fused = has_layer0("mlp.gate_up_proj.weight");
+        let has_plain = has_layer0("mlp.c_fc.weight");
+        // Also accept down_proj as evidence of a recognized MLP
+        let has_down = has_layer0("mlp.down_proj.weight");
+        if !has_gated_separate && !has_gated_fused && !has_plain && !has_down {
+            issues.push(
+                "missing MLP projections: expected 'mlp.gate_proj.weight', \
+                 'mlp.gate_up_proj.weight', or 'mlp.c_fc.weight'"
+                    .into(),
+            );
+        }
+
+        // --- LM head ---
+        let tie = config
+            .get("tie_word_embeddings")
+            .and_then(Value::as_bool)
+            .unwrap_or_else(|| !tensor_names.iter().any(|n| n == "lm_head.weight"));
+        if !tie && !has("lm_head.weight") {
+            issues
+                .push("tie_word_embeddings is false but 'lm_head.weight' tensor is missing".into());
+        }
+
+        CompatibilityReport {
+            compatible: issues.is_empty(),
+            issues,
+        }
+    }
+}
+
+// ---------------------------------------------------------------------------
 // Tests
 // ---------------------------------------------------------------------------
 
@@ -1545,5 +1717,153 @@ mod tests {
         let auto = TransformerConfig::from_hf_config_auto(&json, &names).unwrap();
         let manual = TransformerConfig::from_hf_config(&json).unwrap();
         assert_eq!(auto, manual);
+    }
+
+    // -----------------------------------------------------------------------
+    // Compatibility check tests
+    // -----------------------------------------------------------------------
+
+    #[test]
+    fn compatibility_check_passes_standard_model() {
+        let json = serde_json::json!({
+            "model_type": "my_custom",
+            "hidden_size": 2048,
+            "num_hidden_layers": 16,
+            "num_attention_heads": 32,
+            "intermediate_size": 8192,
+            "vocab_size": 32000,
+            "tie_word_embeddings": true
+        });
+        let names = tensor_names(&[
+            "model.embed_tokens.weight",
+            "model.layers.0.input_layernorm.weight",
+            "model.layers.0.post_attention_layernorm.weight",
+            "model.layers.0.self_attn.q_proj.weight",
+            "model.layers.0.mlp.gate_proj.weight",
+            "model.norm.weight",
+        ]);
+        let report = TransformerConfig::check_auto_compatibility(&json, &names);
+        assert!(report.compatible, "issues: {:?}", report.issues);
+    }
+
+    #[test]
+    fn compatibility_check_detects_missing_norms() {
+        // OLMo-like: no norm weights at all
+        let json = serde_json::json!({
+            "model_type": "olmo",
+            "hidden_size": 2048,
+            "num_hidden_layers": 16,
+            "num_attention_heads": 16,
+            "intermediate_size": 8192,
+            "vocab_size": 50304
+        });
+        let names = tensor_names(&[
+            "model.embed_tokens.weight",
+            "model.layers.0.self_attn.q_proj.weight",
+            "model.layers.0.mlp.gate_proj.weight",
+            "model.layers.0.mlp.down_proj.weight",
+        ]);
+        let report = TransformerConfig::check_auto_compatibility(&json, &names);
+        assert!(!report.compatible);
+        // Should detect missing input_layernorm, post_attention_layernorm, and model.norm
+        assert!(report.issues.len() >= 3, "issues: {:?}", report.issues);
+        assert!(
+            report.issues.iter().any(|i| i.contains("input_layernorm")),
+            "should mention input_layernorm"
+        );
+        assert!(
+            report.issues.iter().any(|i| i.contains("model.norm")),
+            "should mention model.norm"
+        );
+    }
+
+    #[test]
+    fn compatibility_check_detects_missing_config_fields() {
+        let json = serde_json::json!({
+            "model_type": "mystery",
+            "hidden_size": 768
+        });
+        let names = tensor_names(&[]);
+        let report = TransformerConfig::check_auto_compatibility(&json, &names);
+        assert!(!report.compatible);
+        // Missing: num_hidden_layers, num_attention_heads, intermediate_size, vocab_size
+        assert!(
+            report
+                .issues
+                .iter()
+                .any(|i| i.contains("num_hidden_layers")),
+            "should mention num_hidden_layers"
+        );
+    }
+
+    #[test]
+    fn compatibility_check_detects_missing_lm_head() {
+        let json = serde_json::json!({
+            "model_type": "custom",
+            "hidden_size": 2048,
+            "num_hidden_layers": 16,
+            "num_attention_heads": 32,
+            "intermediate_size": 8192,
+            "vocab_size": 32000,
+            "tie_word_embeddings": false
+        });
+        let names = tensor_names(&[
+            "model.embed_tokens.weight",
+            "model.layers.0.input_layernorm.weight",
+            "model.layers.0.post_attention_layernorm.weight",
+            "model.layers.0.self_attn.q_proj.weight",
+            "model.layers.0.mlp.gate_proj.weight",
+            "model.norm.weight",
+            // Missing: lm_head.weight
+        ]);
+        let report = TransformerConfig::check_auto_compatibility(&json, &names);
+        assert!(!report.compatible);
+        assert!(
+            report.issues.iter().any(|i| i.contains("lm_head")),
+            "should mention lm_head"
+        );
+    }
+
+    #[test]
+    fn compatibility_check_config_only() {
+        let good = serde_json::json!({
+            "hidden_size": 2048,
+            "num_hidden_layers": 16,
+            "num_attention_heads": 32,
+            "intermediate_size": 8192,
+            "vocab_size": 32000
+        });
+        assert!(TransformerConfig::check_config_fields(&good).compatible);
+
+        let bad = serde_json::json!({
+            "hidden_size": 2048
+        });
+        let report = TransformerConfig::check_config_fields(&bad);
+        assert!(!report.compatible);
+        assert_eq!(report.issues.len(), 4); // missing 4 of 5 required fields
+    }
+
+    #[test]
+    fn compatibility_into_result_error_message() {
+        let json = serde_json::json!({
+            "model_type": "olmo",
+            "hidden_size": 2048,
+            "num_hidden_layers": 16,
+            "num_attention_heads": 16,
+            "intermediate_size": 8192,
+            "vocab_size": 50304
+        });
+        let names = tensor_names(&[
+            "model.embed_tokens.weight",
+            "model.layers.0.self_attn.q_proj.weight",
+            "model.layers.0.mlp.gate_proj.weight",
+        ]);
+        let result = TransformerConfig::check_auto_compatibility(&json, &names).into_result();
+        assert!(result.is_err());
+        let msg = result.unwrap_err().to_string();
+        assert!(
+            msg.contains("not compatible with GenericTransformer"),
+            "error should explain incompatibility: {msg}"
+        );
     }
 }
