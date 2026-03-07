@@ -1171,4 +1171,379 @@ mod tests {
         let result = TransformerConfig::from_hf_config(&json);
         assert!(result.is_err());
     }
+
+    // -----------------------------------------------------------------------
+    // Auto-config validation: parse_auto() must match manual parsers
+    // -----------------------------------------------------------------------
+    //
+    // For each of the 7 known transformer families, we verify that
+    // parse_auto() produces the SAME TransformerConfig as the manual
+    // parser.  Config JSON and tensor names are taken from real cached
+    // models.
+    //
+    // Known exception — Phi-3 `sliding_window`: The Phi-3 config.json
+    // contains "sliding_window": 2047 but the HuggingFace implementation
+    // ignores it.  The manual parser sets None; the auto-parser reads
+    // Some(2047).  We test all other fields and assert the sliding_window
+    // difference explicitly.
+
+    /// Helper: convert `&[&str]` to `Vec<String>` for tensor names.
+    fn tensor_names(names: &[&str]) -> Vec<String> {
+        names.iter().map(|s| (*s).to_owned()).collect()
+    }
+
+    #[test]
+    fn auto_config_matches_llama() {
+        // LLaMA 3.2 1B — actual config.json + tensor names
+        let json = serde_json::json!({
+            "model_type": "llama",
+            "hidden_size": 2048,
+            "num_hidden_layers": 16,
+            "num_attention_heads": 32,
+            "num_key_value_heads": 8,
+            "head_dim": 64,
+            "intermediate_size": 8192,
+            "vocab_size": 128256,
+            "rms_norm_eps": 1e-5,
+            "rope_theta": 500000.0,
+            "max_position_embeddings": 131072,
+            "hidden_act": "silu",
+            "attention_bias": false,
+            "mlp_bias": false,
+            "tie_word_embeddings": true
+        });
+        let names = tensor_names(&[
+            "model.embed_tokens.weight",
+            "model.layers.0.input_layernorm.weight",
+            "model.layers.0.mlp.down_proj.weight",
+            "model.layers.0.mlp.gate_proj.weight",
+            "model.layers.0.mlp.up_proj.weight",
+            "model.layers.0.post_attention_layernorm.weight",
+            "model.layers.0.self_attn.k_proj.weight",
+            "model.layers.0.self_attn.o_proj.weight",
+            "model.layers.0.self_attn.q_proj.weight",
+            "model.layers.0.self_attn.v_proj.weight",
+            "model.norm.weight",
+        ]);
+
+        let manual = TransformerConfig::from_hf_config(&json).unwrap();
+        let auto = TransformerConfig::parse_auto(&json, &names, "llama").unwrap();
+        assert_eq!(auto, manual);
+    }
+
+    #[test]
+    fn auto_config_matches_qwen2() {
+        // Qwen2.5-Coder-3B-Instruct — actual config.json + tensor names
+        let json = serde_json::json!({
+            "model_type": "qwen2",
+            "hidden_size": 2048,
+            "num_hidden_layers": 36,
+            "num_attention_heads": 16,
+            "num_key_value_heads": 2,
+            "intermediate_size": 11008,
+            "vocab_size": 151936,
+            "rms_norm_eps": 1e-6,
+            "rope_theta": 1000000.0,
+            "max_position_embeddings": 32768,
+            "hidden_act": "silu",
+            "tie_word_embeddings": true,
+            "sliding_window": 32768,
+            "use_sliding_window": false
+        });
+        let names = tensor_names(&[
+            "model.embed_tokens.weight",
+            "model.layers.0.input_layernorm.weight",
+            "model.layers.0.mlp.down_proj.weight",
+            "model.layers.0.mlp.gate_proj.weight",
+            "model.layers.0.mlp.up_proj.weight",
+            "model.layers.0.post_attention_layernorm.weight",
+            "model.layers.0.self_attn.k_proj.bias",
+            "model.layers.0.self_attn.k_proj.weight",
+            "model.layers.0.self_attn.o_proj.weight",
+            "model.layers.0.self_attn.q_proj.bias",
+            "model.layers.0.self_attn.q_proj.weight",
+            "model.layers.0.self_attn.v_proj.bias",
+            "model.layers.0.self_attn.v_proj.weight",
+            "model.norm.weight",
+        ]);
+
+        let manual = TransformerConfig::from_hf_config(&json).unwrap();
+        let auto = TransformerConfig::parse_auto(&json, &names, "qwen2").unwrap();
+        assert_eq!(auto, manual);
+    }
+
+    #[test]
+    fn auto_config_matches_gemma() {
+        // CodeGemma 7B IT — actual config.json + tensor names
+        let json = serde_json::json!({
+            "model_type": "gemma",
+            "hidden_size": 3072,
+            "num_hidden_layers": 28,
+            "num_attention_heads": 16,
+            "num_key_value_heads": 16,
+            "head_dim": 256,
+            "intermediate_size": 24576,
+            "vocab_size": 256000,
+            "rms_norm_eps": 1e-6,
+            "rope_theta": 10000.0,
+            "max_position_embeddings": 8192,
+            "hidden_activation": "gelu_pytorch_tanh"
+        });
+        let names = tensor_names(&[
+            "model.embed_tokens.weight",
+            "model.layers.0.input_layernorm.weight",
+            "model.layers.0.mlp.down_proj.weight",
+            "model.layers.0.mlp.gate_proj.weight",
+            "model.layers.0.mlp.up_proj.weight",
+            "model.layers.0.post_attention_layernorm.weight",
+            "model.layers.0.self_attn.k_proj.weight",
+            "model.layers.0.self_attn.o_proj.weight",
+            "model.layers.0.self_attn.q_proj.weight",
+            "model.layers.0.self_attn.v_proj.weight",
+            "model.norm.weight",
+        ]);
+
+        let manual = TransformerConfig::from_hf_config(&json).unwrap();
+        let auto = TransformerConfig::parse_auto(&json, &names, "gemma").unwrap();
+        assert_eq!(auto, manual);
+    }
+
+    #[test]
+    fn auto_config_matches_gemma2() {
+        // Gemma 2 2B — actual config.json + tensor names
+        let json = serde_json::json!({
+            "model_type": "gemma2",
+            "hidden_size": 2304,
+            "num_hidden_layers": 26,
+            "num_attention_heads": 8,
+            "num_key_value_heads": 4,
+            "head_dim": 256,
+            "intermediate_size": 9216,
+            "vocab_size": 256000,
+            "rms_norm_eps": 1e-6,
+            "rope_theta": 10000.0,
+            "max_position_embeddings": 8192,
+            "hidden_act": "gelu_pytorch_tanh",
+            "hidden_activation": "gelu_pytorch_tanh",
+            "attn_logit_softcapping": 50.0,
+            "final_logit_softcapping": 30.0,
+            "query_pre_attn_scalar": 256,
+            "sliding_window": 4096
+        });
+        let names = tensor_names(&[
+            "model.embed_tokens.weight",
+            "model.layers.0.input_layernorm.weight",
+            "model.layers.0.mlp.down_proj.weight",
+            "model.layers.0.mlp.gate_proj.weight",
+            "model.layers.0.mlp.up_proj.weight",
+            "model.layers.0.post_attention_layernorm.weight",
+            "model.layers.0.post_feedforward_layernorm.weight",
+            "model.layers.0.pre_feedforward_layernorm.weight",
+            "model.layers.0.self_attn.k_proj.weight",
+            "model.layers.0.self_attn.o_proj.weight",
+            "model.layers.0.self_attn.q_proj.weight",
+            "model.layers.0.self_attn.v_proj.weight",
+            "model.norm.weight",
+        ]);
+
+        let manual = TransformerConfig::from_hf_config(&json).unwrap();
+        let auto = TransformerConfig::parse_auto(&json, &names, "gemma2").unwrap();
+        assert_eq!(auto, manual);
+    }
+
+    #[test]
+    fn auto_config_matches_phi3() {
+        // Phi-3-mini-4k-instruct — actual config.json + tensor names
+        //
+        // Known exception: Phi-3 config.json contains "sliding_window": 2047
+        // but the manual parser ignores it (sets None).  The auto-parser
+        // reads it as Some(2047).  We verify all other fields match and
+        // assert the sliding_window difference explicitly.
+        let json = serde_json::json!({
+            "model_type": "phi3",
+            "hidden_size": 3072,
+            "num_hidden_layers": 32,
+            "num_attention_heads": 32,
+            "num_key_value_heads": 32,
+            "intermediate_size": 8192,
+            "vocab_size": 32064,
+            "rms_norm_eps": 1e-5,
+            "rope_theta": 10000.0,
+            "max_position_embeddings": 4096,
+            "hidden_act": "silu",
+            "tie_word_embeddings": false,
+            "sliding_window": 2047,
+            "attention_bias": false
+        });
+        let names = tensor_names(&[
+            "lm_head.weight",
+            "model.embed_tokens.weight",
+            "model.layers.0.input_layernorm.weight",
+            "model.layers.0.mlp.down_proj.weight",
+            "model.layers.0.mlp.gate_up_proj.weight",
+            "model.layers.0.post_attention_layernorm.weight",
+            "model.layers.0.self_attn.o_proj.weight",
+            "model.layers.0.self_attn.qkv_proj.weight",
+            "model.norm.weight",
+        ]);
+
+        let manual = TransformerConfig::from_hf_config(&json).unwrap();
+        let auto = TransformerConfig::parse_auto(&json, &names, "phi3").unwrap();
+
+        // Known exception: sliding_window
+        assert_eq!(manual.sliding_window, None);
+        assert_eq!(auto.sliding_window, Some(2047));
+
+        // All other fields must match — compare field by field excluding
+        // sliding_window by creating copies with the same value.
+        let mut auto_adjusted = auto;
+        auto_adjusted.sliding_window = None;
+        assert_eq!(auto_adjusted, manual);
+    }
+
+    #[test]
+    fn auto_config_matches_starcoder2() {
+        // StarCoder2-3B — actual config.json + tensor names
+        let json = serde_json::json!({
+            "model_type": "starcoder2",
+            "hidden_size": 3072,
+            "num_hidden_layers": 30,
+            "num_attention_heads": 24,
+            "num_key_value_heads": 2,
+            "intermediate_size": 12288,
+            "vocab_size": 49152,
+            "norm_epsilon": 1e-5,
+            "norm_type": "layer_norm",
+            "rope_theta": 999999.4420358813,
+            "max_position_embeddings": 16384,
+            "hidden_act": "gelu_pytorch_tanh",
+            "use_bias": true,
+            "sliding_window": 4096
+        });
+        let names = tensor_names(&[
+            "model.embed_tokens.weight",
+            "model.layers.0.input_layernorm.bias",
+            "model.layers.0.input_layernorm.weight",
+            "model.layers.0.mlp.c_fc.bias",
+            "model.layers.0.mlp.c_fc.weight",
+            "model.layers.0.mlp.c_proj.bias",
+            "model.layers.0.mlp.c_proj.weight",
+            "model.layers.0.post_attention_layernorm.bias",
+            "model.layers.0.post_attention_layernorm.weight",
+            "model.layers.0.self_attn.k_proj.bias",
+            "model.layers.0.self_attn.k_proj.weight",
+            "model.layers.0.self_attn.o_proj.bias",
+            "model.layers.0.self_attn.o_proj.weight",
+            "model.layers.0.self_attn.q_proj.bias",
+            "model.layers.0.self_attn.q_proj.weight",
+            "model.layers.0.self_attn.v_proj.bias",
+            "model.layers.0.self_attn.v_proj.weight",
+            "model.norm.bias",
+            "model.norm.weight",
+        ]);
+
+        let manual = TransformerConfig::from_hf_config(&json).unwrap();
+        let auto = TransformerConfig::parse_auto(&json, &names, "starcoder2").unwrap();
+        assert_eq!(auto, manual);
+    }
+
+    #[test]
+    fn auto_config_matches_mistral() {
+        // Mistral 7B v0.1 — actual config.json + tensor names
+        let json = serde_json::json!({
+            "model_type": "mistral",
+            "hidden_size": 4096,
+            "num_hidden_layers": 32,
+            "num_attention_heads": 32,
+            "num_key_value_heads": 8,
+            "intermediate_size": 14336,
+            "vocab_size": 32000,
+            "rms_norm_eps": 1e-5,
+            "rope_theta": 10000.0,
+            "max_position_embeddings": 32768,
+            "hidden_act": "silu",
+            "tie_word_embeddings": false,
+            "sliding_window": 4096
+        });
+        let names = tensor_names(&[
+            "lm_head.weight",
+            "model.embed_tokens.weight",
+            "model.layers.0.input_layernorm.weight",
+            "model.layers.0.mlp.down_proj.weight",
+            "model.layers.0.mlp.gate_proj.weight",
+            "model.layers.0.mlp.up_proj.weight",
+            "model.layers.0.post_attention_layernorm.weight",
+            "model.layers.0.self_attn.k_proj.weight",
+            "model.layers.0.self_attn.o_proj.weight",
+            "model.layers.0.self_attn.q_proj.weight",
+            "model.layers.0.self_attn.v_proj.weight",
+            "model.norm.weight",
+        ]);
+
+        let manual = TransformerConfig::from_hf_config(&json).unwrap();
+        let auto = TransformerConfig::parse_auto(&json, &names, "mistral").unwrap();
+        assert_eq!(auto, manual);
+    }
+
+    #[test]
+    fn auto_config_unknown_model_type() {
+        // Verify auto-config works for an unknown model_type using
+        // LLaMA-like config.json + tensor names.
+        let json = serde_json::json!({
+            "model_type": "my_custom_llama",
+            "hidden_size": 2048,
+            "num_hidden_layers": 16,
+            "num_attention_heads": 32,
+            "num_key_value_heads": 8,
+            "intermediate_size": 8192,
+            "vocab_size": 32000,
+            "rms_norm_eps": 1e-5,
+            "rope_theta": 10000.0,
+            "max_position_embeddings": 4096,
+            "hidden_act": "silu"
+        });
+        let names = tensor_names(&[
+            "lm_head.weight",
+            "model.embed_tokens.weight",
+            "model.layers.0.input_layernorm.weight",
+            "model.layers.0.mlp.down_proj.weight",
+            "model.layers.0.mlp.gate_proj.weight",
+            "model.layers.0.mlp.up_proj.weight",
+            "model.layers.0.post_attention_layernorm.weight",
+            "model.layers.0.self_attn.k_proj.weight",
+            "model.layers.0.self_attn.o_proj.weight",
+            "model.layers.0.self_attn.q_proj.weight",
+            "model.layers.0.self_attn.v_proj.weight",
+            "model.norm.weight",
+        ]);
+
+        // from_hf_config_auto should use auto-parser (not error)
+        let config = TransformerConfig::from_hf_config_auto(&json, &names).unwrap();
+        assert_eq!(config.hidden_size, 2048);
+        assert_eq!(config.num_layers, 16);
+        assert_eq!(config.num_attention_heads, 32);
+        assert_eq!(config.num_kv_heads, 8);
+        assert_eq!(config.head_dim, 64);
+        assert_eq!(config.norm_type, NormType::RmsNorm);
+        assert_eq!(config.activation, Activation::Silu);
+        assert_eq!(config.qkv_layout, QkvLayout::Separate);
+        assert_eq!(config.mlp_layout, MlpLayout::GatedSeparate);
+        assert!(!config.qkv_bias);
+        assert!(!config.o_proj_bias);
+        assert!(!config.mlp_bias);
+        assert!(config.embedding_scale.is_none());
+        assert!(!config.tie_word_embeddings);
+        assert!(config.sliding_window.is_none());
+    }
+
+    #[test]
+    fn auto_config_dispatches_known_families() {
+        // Verify from_hf_config_auto delegates known families to manual parsers
+        let json = llama_config_json();
+        let names = tensor_names(&["model.embed_tokens.weight"]);
+
+        let auto = TransformerConfig::from_hf_config_auto(&json, &names).unwrap();
+        let manual = TransformerConfig::from_hf_config(&json).unwrap();
+        assert_eq!(auto, manual);
+    }
 }
