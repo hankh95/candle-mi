@@ -27,6 +27,10 @@ cargo run --release --features sae,transformer --example quick_start_sae
 cargo run --release --features transformer --example auto_config_dogfood -- "allenai/OLMo-1B-hf"
 ```
 
+### Example output: `auto_config_dogfood` on OLMo-1B
+
+![auto_config_dogfood output for OLMo-1B-hf](screenshots/auto_config_olmo.png)
+
 ## Prerequisites
 
 - **quick_start_transformer** and **quick_start_sae** require models cached

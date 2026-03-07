@@ -9,9 +9,9 @@
 //! **What it does:**
 //!
 //! 1. Downloads the model using `hf-fetch-model` (fast parallel download).
-//! 2. Measures download time.
-//! 3. Loads the model via [`MIModel::from_pretrained()`], which will use
-//!    auto-config for unknown model families.
+//! 2. Inspects `config.json` and reports whether auto-config will be used.
+//! 3. Loads the model via [`MIModel::from_pretrained()`], which uses
+//!    auto-config for unknown model families (includes compatibility check).
 //! 4. Runs a short forward pass to verify the model works end-to-end.
 
 fn main() {
