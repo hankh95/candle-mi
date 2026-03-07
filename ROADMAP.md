@@ -3,7 +3,7 @@
 > *MI for the Rust of us*
 
 **Date:** February 19, 2026 (last updated: March 6, 2026)
-**Status:** Phase 0 + Phase 1 + Phase 2 + Phase 3 + Phase 4 complete. Published on [crates.io](https://crates.io/crates/candle-mi) as v0.0.5. Default dtype changed to F32 for research-grade precision.
+**Status:** Phase 0 + Phase 1 + Phase 2 + Phase 3 + Phase 4 complete. Phase 5 in progress (auto-config done). Published on [crates.io](https://crates.io/crates/candle-mi) as v0.0.5. Default dtype changed to F32 for research-grade precision.
 **Context:** Building on plip-rs experience (7 model backends incl. Gemma 2, attention knockout, state knockout, effective attention, steering, logit lens, CLT encoding/injection). Two successful replications of Anthropic's "Planning in Poems" Figure 13 validate the approach: Gemma 2 2B with 426K CLTs (melometis branch) and Llama 3.2 1B with 524K CLTs (tragos branch). Target: a publishable, generic Rust MI crate endorsed by HuggingFace.
 
 ---
@@ -790,8 +790,8 @@ CI enforces the same three checks on every push. A red CI is treated as a blocki
 
 **Goal:** Auto-config for unknown model families, API polish, documentation, examples, crates.io v0.1.0.
 
-- [ ] Implement `from_hf_config_auto()` — generic config parser for unknown `model_type` values; reads `config.json` scalars (Tier 1–2) + safetensors tensor names (Tier 3: QKV/MLP layout, bias flags, norm type, post-norms) + `model_type` fixups (Tier 4: GemmaRmsNorm, embedding_scale, alternating_sliding_window). Two-tier dispatch: known families use existing parsers, unknown families use auto-parser. ~100 lines + ~20 lines tensor-name utilities. See `candle-mi-auto-config-brainstorming.md` for field-by-field derivation plan — **commit**
-- [ ] Validate auto-config against all 7 known families (must produce identical configs to manual parsers) — **commit**
+- [x] Implement `from_hf_config_auto()` — generic config parser for unknown `model_type` values; reads `config.json` scalars (Tier 1–2) + safetensors tensor names (Tier 3: QKV/MLP layout, bias flags, norm type, post-norms) + `model_type` fixups (Tier 4: GemmaRmsNorm, embedding_scale, alternating_sliding_window). Two-tier dispatch: known families use existing parsers, unknown families use auto-parser. Includes `CompatibilityReport` preflight check that detects incompatible models (missing norms, projections, etc.) before weight loading. ~120 lines + ~20 lines tensor-name utilities + ~80 lines compatibility check. See `candle-mi-auto-config-brainstorming.md` for field-by-field derivation plan — **commit `9948bc0`**, **commit `ceee9ac`**
+- [x] Validate auto-config against all 7 known families (must produce identical configs to manual parsers) — **commit `8037419`**
 - [ ] Audit public API surface (`pub` vs `pub(crate)`) — **commit**
 - [ ] Write crate-level documentation with examples — **commit**
 - [ ] Write `BACKENDS.md` — how to add a new model architecture — **commit**
