@@ -9,12 +9,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 
 ### Added
 
+- **Auto-config for unknown model families** — `from_hf_config_auto()`
+  automatically infers `TransformerConfig` from any HuggingFace `config.json`,
+  with a compatibility check that verifies weight tensor names match
+  `GenericTransformer` expectations before loading; validated against all 7
+  known model families (produces identical configs to manual parsers);
+  `auto_config_dogfood` example demonstrates success and failure cases
 - **Figure 13 planning-in-poems example** (`figure13_planning_poems`) —
   replicates Anthropic's Figure 13 (suppress + inject position sweep) with
   three presets: `llama3.2-1b-524k` (Llama 3.2 1B, P("that")=0.98),
   `gemma2-2b-426k` (Gemma 2 2B, P("around")=0.457), and `gemma2-2b-2.5m`
   (Gemma 2 2B 2.5M word-level CLT, P("can")=0.425); includes Mathematica
   plotting script and CLT landscape documentation
+- **Download progress bars** — switched from tracing log lines to `indicatif`
+  progress bars showing bytes, throughput, and ETA (via `hf-fetch-model` 0.7.1)
 - `extract_token_prob()` — extract a single token's probability from logits
   (softmax over last position)
 - `HookSpec::extend()` — merge two hook specs (used to combine suppress +
@@ -33,8 +41,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 - Adapted to `hf-fetch-model` 0.7.2 `DownloadOutcome` API — added
   `.into_inner()` calls across `clt/mod.rs` (4 sites), `sae/mod.rs`
   (3 sites), `download.rs` (1 site), and `auto_config_dogfood.rs` (1 site)
+- `Display` formatting for error messages in `auto_config_dogfood` example
 
-## [0.0.5] - 2026-03-06
+## [0.0.5-phase4] - 2026-03-06
 
 ### Added
 
@@ -282,8 +291,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 - CI workflow (fmt, clippy pedantic, tests, feature-flag hygiene)
 - Tag-triggered publish workflow with `workflow_dispatch` fallback
 
-[Unreleased]: https://github.com/PCfVW/candle-mi/compare/v0.0.5...HEAD
-[0.0.5]: https://github.com/PCfVW/candle-mi/compare/v0.0.4-phase3...v0.0.5
+[Unreleased]: https://github.com/PCfVW/candle-mi/compare/v0.0.5-phase4...HEAD
+[0.0.5-phase4]: https://github.com/PCfVW/candle-mi/compare/v0.0.4-phase3...v0.0.5-phase4
 [0.0.4]: https://github.com/PCfVW/candle-mi/compare/v0.0.3...v0.0.4-phase3
 [0.0.3]: https://github.com/PCfVW/candle-mi/releases/tag/v0.0.3
 [0.0.2-phase1]: https://github.com/PCfVW/candle-mi/releases/tag/v0.0.2-phase1
