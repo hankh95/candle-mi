@@ -369,6 +369,17 @@ impl HookSpec {
     pub const fn state_steering(&self) -> Option<&StateSteeringSpec> {
         self.state_steering.as_ref()
     }
+
+    /// Merge all captures and interventions from another [`HookSpec`] into this one.
+    ///
+    /// Useful for combining multiple intervention sources (e.g., suppress +
+    /// inject in CLT steering).
+    pub fn extend(&mut self, other: &Self) -> &mut Self {
+        self.captures.extend(other.captures.iter().cloned());
+        self.interventions
+            .extend(other.interventions.iter().cloned());
+        self
+    }
 }
 
 // ---------------------------------------------------------------------------

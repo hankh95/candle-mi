@@ -82,7 +82,7 @@ mod util;
 // --- Public re-exports ---------------------------------------------------
 
 // Backend
-pub use backend::{GenerationResult, MIBackend, MIModel, sample_token};
+pub use backend::{GenerationResult, MIBackend, MIModel, extract_token_prob, sample_token};
 
 // Config
 pub use config::{

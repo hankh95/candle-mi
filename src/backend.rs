@@ -9,6 +9,7 @@ use candle_core::{DType, Device, Tensor};
 
 use crate::error::{MIError, Result};
 use crate::hooks::{HookCache, HookSpec};
+use crate::tokenizer::MITokenizer;
 
 // ---------------------------------------------------------------------------
 // MIBackend trait
@@ -116,6 +117,8 @@ pub struct MIModel {
     backend: Box<dyn MIBackend>,
     /// The device this model lives on.
     device: Device,
+    /// Tokenizer loaded alongside the model (present when loaded via `from_pretrained`).
+    tokenizer: Option<MITokenizer>,
 }
 
 impl MIModel {
@@ -145,6 +148,7 @@ impl MIModel {
 
         // --- Download / resolve local files ---
         let files = hf_fetch_model::download_files_blocking(model_id.to_owned())
+            .map(hf_fetch_model::DownloadOutcome::into_inner)
             .map_err(|e| MIError::Download(e.to_string()))?;
 
         let config_path = files
@@ -161,6 +165,11 @@ impl MIModel {
             .and_then(serde_json::Value::as_str)
             .ok_or_else(|| MIError::Config("missing 'model_type' field".into()))?;
 
+        // --- Load tokenizer (best-effort: present for HF models) ---
+        let tokenizer = files
+            .get("tokenizer.json")
+            .and_then(|p| MITokenizer::from_hf_path(p).ok());
+
         let weights_paths = resolve_safetensors_paths(&files)?;
         let vb = create_var_builder(&weights_paths, dtype, &device)?;
 
@@ -172,7 +181,11 @@ impl MIModel {
 
                 let config = TransformerConfig::from_hf_config(&json)?;
                 let transformer = GenericTransformer::load(config, &device, dtype, vb)?;
-                Ok(Self::new(Box::new(transformer), device))
+                Ok(Self::with_tokenizer(
+                    Box::new(transformer),
+                    device,
+                    tokenizer,
+                ))
             }
             #[cfg(feature = "rwkv")]
             mt if crate::rwkv::SUPPORTED_RWKV_MODEL_TYPES.contains(&mt) => {
@@ -180,7 +193,7 @@ impl MIModel {
 
                 let config = RwkvConfig::from_hf_config(&json)?;
                 let rwkv = GenericRwkv::load(config, &device, dtype, vb)?;
-                Ok(Self::new(Box::new(rwkv), device))
+                Ok(Self::with_tokenizer(Box::new(rwkv), device, tokenizer))
             }
             #[cfg(feature = "transformer")]
             _unknown => {
@@ -195,7 +208,11 @@ impl MIModel {
 
                 let config = TransformerConfig::from_hf_config_auto(&json, &tensor_names)?;
                 let transformer = GenericTransformer::load(config, &device, dtype, vb)?;
-                Ok(Self::new(Box::new(transformer), device))
+                Ok(Self::with_tokenizer(
+                    Box::new(transformer),
+                    device,
+                    tokenizer,
+                ))
             }
             #[cfg(not(feature = "transformer"))]
             other => Err(MIError::Config(format!(
@@ -217,17 +234,45 @@ impl MIModel {
         }
     }
 
-    /// Wrap an existing backend.
+    /// Wrap an existing backend (no tokenizer).
     // TRAIT_OBJECT: heterogeneous model backends require dynamic dispatch
     #[must_use]
     pub fn new(backend: Box<dyn MIBackend>, device: Device) -> Self {
-        Self { backend, device }
+        Self {
+            backend,
+            device,
+            tokenizer: None,
+        }
+    }
+
+    /// Wrap an existing backend with an optional tokenizer.
+    // TRAIT_OBJECT: heterogeneous model backends require dynamic dispatch
+    #[must_use]
+    pub fn with_tokenizer(
+        backend: Box<dyn MIBackend>,
+        device: Device,
+        tokenizer: Option<MITokenizer>,
+    ) -> Self {
+        Self {
+            backend,
+            device,
+            tokenizer,
+        }
     }
 
     /// The device this model lives on.
     #[must_use]
     pub const fn device(&self) -> &Device {
         &self.device
+    }
+
+    /// The tokenizer loaded alongside the model, if available.
+    ///
+    /// Present when the model was loaded via [`from_pretrained`](Self::from_pretrained)
+    /// and a `tokenizer.json` was found in the downloaded files.
+    #[must_use]
+    pub const fn tokenizer(&self) -> Option<&MITokenizer> {
+        self.tokenizer.as_ref()
     }
 
     /// Number of layers.
@@ -363,6 +408,46 @@ fn sample_with_temperature(logits: &Tensor, temperature: f32) -> Result<u32> {
     // Fallback to last token (floating-point rounding edge case).
     #[allow(clippy::cast_possible_truncation, clippy::as_conversions)]
     Ok((probs.len() - 1) as u32)
+}
+
+/// Extract the probability of a specific token from a logit tensor.
+///
+/// Applies softmax to the last sequence position and returns the probability
+/// at `token_id`. Useful for measuring steering effectiveness.
+///
+/// # Shapes
+/// - `logits`: `[1, seq_len, vocab]` or `[seq_len, vocab]` or `[vocab]`
+///
+/// # Errors
+///
+/// Returns [`MIError::Model`] on shape mismatch or tensor operation failure.
+pub fn extract_token_prob(logits: &Tensor, token_id: u32) -> Result<f32> {
+    use candle_core::IndexOp;
+
+    let logits_f32 = logits.to_dtype(DType::F32)?;
+
+    // Get last-position logits as a 1-D vector.
+    let last_logits = match logits_f32.dims().len() {
+        1 => logits_f32,
+        2 => {
+            let seq_len = logits_f32.dim(0)?;
+            logits_f32.i(seq_len - 1)?
+        }
+        3 => {
+            let seq_len = logits_f32.dim(1)?;
+            logits_f32.i((0, seq_len - 1))?
+        }
+        n => {
+            return Err(MIError::Model(candle_core::Error::Msg(format!(
+                "extract_token_prob: expected 1-3 dims, got {n}"
+            ))));
+        }
+    };
+
+    let probs = candle_nn::ops::softmax_last_dim(&last_logits)?;
+    #[allow(clippy::as_conversions)]
+    let prob = probs.i(token_id as usize)?.to_scalar::<f32>()?;
+    Ok(prob)
 }
 
 // ---------------------------------------------------------------------------

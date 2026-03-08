@@ -136,6 +136,52 @@ impl MITokenizer {
             Self::Rwkv(tok) => tok.vocab_size(),
         }
     }
+
+    /// Find the token ID for a word, trying `" word"` (with leading space) first,
+    /// then bare `"word"`.
+    ///
+    /// This handles BPE tokenizers that represent word-initial tokens with a
+    /// leading space (e.g., `" cat"` → single token).
+    ///
+    /// # Errors
+    ///
+    /// Returns [`MIError::Tokenizer`] if the word cannot be resolved to a
+    /// single token in either form.
+    pub fn find_token_id(&self, word: &str) -> Result<u32> {
+        // Try with leading space first (most BPE tokenizers).
+        let with_space = format!(" {word}");
+        let ids = self.encode(&with_space)?;
+        // ids[0] is BOS (if present), ids[1] would be the word token.
+        if ids.len() == 2 {
+            return ids
+                .get(1)
+                .copied()
+                .ok_or_else(|| MIError::Tokenizer(format!("unexpected encoding for \" {word}\"")));
+        }
+
+        // Try bare word.
+        let bare_ids = self.encode(word)?;
+        if bare_ids.len() == 2 {
+            return bare_ids
+                .get(1)
+                .copied()
+                .ok_or_else(|| MIError::Tokenizer(format!("unexpected encoding for \"{word}\"")));
+        }
+
+        // Last resort: return last token.
+        ids.last().copied().ok_or_else(|| {
+            MIError::Tokenizer(format!("could not find single token ID for \"{word}\""))
+        })
+    }
+
+    /// Decode a single token ID to its string representation.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`MIError::Tokenizer`] if decoding fails.
+    pub fn decode_token(&self, token_id: u32) -> Result<String> {
+        self.decode(&[token_id])
+    }
 }
 
 impl std::fmt::Debug for MITokenizer {
