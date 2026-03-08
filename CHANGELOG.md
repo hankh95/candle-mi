@@ -5,6 +5,29 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/),
 and this project adheres to [Semantic Versioning](https://semver.org/).
 
+## [Unreleased]
+
+### Added
+
+- **Figure 13 planning-in-poems example** (`figure13_planning_poems`) —
+  replicates Anthropic's Figure 13 (suppress + inject position sweep) with
+  three presets: `llama3.2-1b-524k` (Llama 3.2 1B, P("that")=0.98),
+  `gemma2-2b-426k` (Gemma 2 2B, P("around")=0.457), and `gemma2-2b-2.5m`
+  (Gemma 2 2B 2.5M word-level CLT, P("can")=0.425); includes Mathematica
+  plotting script and CLT landscape documentation
+- `extract_token_prob()` — extract a single token's probability from logits
+  (softmax over last position)
+- `HookSpec::extend()` — merge two hook specs (used to combine suppress +
+  inject interventions)
+- `MITokenizer::find_token_id()` — look up a token ID by word string
+- `MITokenizer::decode_token()` — decode a single token ID back to string
+
+### Fixed
+
+- Adapted to `hf-fetch-model` 0.7.2 `DownloadOutcome` API — added
+  `.into_inner()` calls across `clt/mod.rs` (4 sites), `sae/mod.rs`
+  (3 sites), `download.rs` (1 site), and `auto_config_dogfood.rs` (1 site)
+
 ## [0.0.5] - 2026-03-06
 
 ### Added
@@ -253,7 +276,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 - CI workflow (fmt, clippy pedantic, tests, feature-flag hygiene)
 - Tag-triggered publish workflow with `workflow_dispatch` fallback
 
-[Unreleased]: https://github.com/PCfVW/candle-mi/compare/v0.0.4-phase3...HEAD
+[Unreleased]: https://github.com/PCfVW/candle-mi/compare/v0.0.5...HEAD
+[0.0.5]: https://github.com/PCfVW/candle-mi/compare/v0.0.4-phase3...v0.0.5
 [0.0.4]: https://github.com/PCfVW/candle-mi/compare/v0.0.3...v0.0.4-phase3
 [0.0.3]: https://github.com/PCfVW/candle-mi/releases/tag/v0.0.3
 [0.0.2-phase1]: https://github.com/PCfVW/candle-mi/releases/tag/v0.0.2-phase1
