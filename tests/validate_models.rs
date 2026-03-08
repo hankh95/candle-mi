@@ -580,7 +580,7 @@ fn ensure_mistral_7b_cached() -> Option<std::path::PathBuf> {
         "mistralai/Mistral-7B-v0.1".to_owned(),
         &config,
     ) {
-        Ok(_path) => find_snapshot("mistralai/Mistral-7B-v0.1"),
+        Ok(_outcome) => find_snapshot("mistralai/Mistral-7B-v0.1"),
         Err(e) => {
             eprintln!("  FAILED to download: {e}");
             None

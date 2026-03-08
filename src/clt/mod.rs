@@ -46,7 +46,9 @@ use crate::error::{MIError, Result};
 // ---------------------------------------------------------------------------
 
 /// Identifies a single CLT feature by its source layer and index within that layer.
-#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
+#[derive(
+    Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash, serde::Serialize, serde::Deserialize,
+)]
 pub struct CltFeatureId {
     /// Source layer where this feature's encoder lives (`0..n_layers`).
     pub layer: usize,
@@ -296,7 +298,8 @@ impl CrossLayerTranscoder {
             "config.yaml",
             &fetch_config,
         ) {
-            Ok(path) => {
+            Ok(outcome) => {
+                let path = outcome.into_inner();
                 let text = std::fs::read_to_string(&path)?;
                 parse_yaml_value(&text, "model_name").unwrap_or_else(|| "unknown".to_owned())
             }
@@ -309,7 +312,8 @@ impl CrossLayerTranscoder {
             "W_enc_0.safetensors",
             &fetch_config,
         )
-        .map_err(|e| MIError::Download(format!("failed to download W_enc_0: {e}")))?;
+        .map_err(|e| MIError::Download(format!("failed to download W_enc_0: {e}")))?
+        .into_inner();
 
         let data = std::fs::read(&enc0_path)?;
         let tensors = SafeTensors::deserialize(&data)
@@ -391,7 +395,8 @@ impl CrossLayerTranscoder {
             &filename,
             &self.fetch_config,
         )
-        .map_err(|e| MIError::Download(format!("failed to download {filename}: {e}")))?;
+        .map_err(|e| MIError::Download(format!("failed to download {filename}: {e}")))?
+        .into_inner();
         if let Some(slot) = self.encoder_paths.get_mut(layer) {
             // BORROW: explicit .clone() — store PathBuf in cache
             *slot = Some(path.clone());
@@ -416,7 +421,8 @@ impl CrossLayerTranscoder {
             &filename,
             &self.fetch_config,
         )
-        .map_err(|e| MIError::Download(format!("failed to download {filename}: {e}")))?;
+        .map_err(|e| MIError::Download(format!("failed to download {filename}: {e}")))?
+        .into_inner();
         if let Some(slot) = self.decoder_paths.get_mut(layer) {
             // BORROW: explicit .clone() — store PathBuf in cache
             *slot = Some(path.clone());

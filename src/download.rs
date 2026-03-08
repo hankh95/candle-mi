@@ -57,6 +57,7 @@ pub async fn download_model(repo_id: String) -> Result<PathBuf> {
 
     hf_fetch_model::download_with_config(repo_id, &config)
         .await
+        .map(hf_fetch_model::DownloadOutcome::into_inner)
         .map_err(|e| MIError::Download(e.to_string()))
 }
 

@@ -552,7 +552,8 @@ impl SparseAutoencoder {
         info!("Downloading {npz_path} from {repo_id}");
         let local_path =
             hf_fetch_model::download_file_blocking(repo_id.to_owned(), npz_path, &fetch_config)
-                .map_err(|e| MIError::Download(format!("failed to download NPZ: {e}")))?;
+                .map_err(|e| MIError::Download(format!("failed to download NPZ: {e}")))?
+                .into_inner();
 
         Self::from_npz(&local_path, hook_layer, device)
     }
@@ -592,7 +593,8 @@ impl SparseAutoencoder {
         info!("Downloading {cfg_remote} from {repo_id}");
         let cfg_path =
             hf_fetch_model::download_file_blocking(repo_id.to_owned(), &cfg_remote, &fetch_config)
-                .map_err(|e| MIError::Download(format!("failed to download cfg.json: {e}")))?;
+                .map_err(|e| MIError::Download(format!("failed to download cfg.json: {e}")))?
+                .into_inner();
 
         // Download weights: try sae_weights.safetensors, fall back to model.safetensors.
         let weights_remote = format!("{sae_id}/sae_weights.safetensors");
@@ -607,7 +609,8 @@ impl SparseAutoencoder {
             info!("Trying {alt_remote} from {repo_id}");
             hf_fetch_model::download_file_blocking(repo_id.to_owned(), &alt_remote, &fetch_config)
         })
-        .map_err(|e| MIError::Download(format!("failed to download SAE weights: {e}")))?;
+        .map_err(|e| MIError::Download(format!("failed to download SAE weights: {e}")))?
+        .into_inner();
 
         // Both files are in cache; determine the common directory.
         let dir = cfg_path.parent().ok_or_else(|| {

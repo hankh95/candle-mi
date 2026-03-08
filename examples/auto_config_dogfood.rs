@@ -56,7 +56,8 @@ fn inspect_config(model_id: &str) -> candle_mi::Result<()> {
     eprintln!("=== Step 2: Inspect config.json ===");
 
     let files = hf_fetch_model::download_files_blocking(model_id.to_owned())
-        .map_err(|e| candle_mi::MIError::Download(e.to_string()))?;
+        .map_err(|e| candle_mi::MIError::Download(e.to_string()))?
+        .into_inner();
 
     let config_path = files
         .get("config.json")
