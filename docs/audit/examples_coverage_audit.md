@@ -102,7 +102,7 @@ input adds friction without adding value for single-prompt examples.
 #### Output format: CLI printing + opt-in JSON
 
 Examples print human-readable results to stdout by default. JSON output for
-programmatic consumption is opt-in (planned for future work via `--json` flag).
+programmatic consumption is opt-in via `--output <path>` (implemented in logit_lens, figure13).
 
 - CLI output follows a consistent format: model name header, indented results,
   summary tables.
@@ -112,7 +112,7 @@ programmatic consumption is opt-in (planned for future work via `--json` flag).
 
 The 5 implemented examples use `std::env::args()` for simplicity (single
 optional model ID, no flags). For future examples with richer CLI (e.g.,
-`--json`, `--layer`, `--top-k`), the agreed convention is **Clap isolation**:
+`--output`, `--layer`, `--top-k`), the agreed convention is **Clap isolation**:
 separate CLI parsing from MI logic with clear section comments:
 
 ```rust

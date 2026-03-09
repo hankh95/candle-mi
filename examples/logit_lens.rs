@@ -10,7 +10,7 @@
 //! cargo run --release --features transformer,mmap --example logit_lens
 //!
 //! # With JSON output
-//! cargo run --release --features transformer --example logit_lens -- "meta-llama/Llama-3.2-1B" --json results.json
+//! cargo run --release --features transformer --example logit_lens -- "meta-llama/Llama-3.2-1B" --output results.json
 //!
 //! # With real memory reporting (RAM + VRAM)
 //! cargo run --release --features transformer,memory --example logit_lens -- "meta-llama/Llama-3.2-1B"
@@ -27,7 +27,7 @@
 //! 3. Builds a [`LogitLensAnalysis`](candle_mi::LogitLensAnalysis) and
 //!    prints both a summary and a detailed view, plus the first layer at
 //!    which the expected answer token appears.
-//! 4. Optionally writes structured JSON output via `--json <path>`.
+//! 4. Optionally writes structured JSON output via `--output <path>`.
 //!
 //! Pass a model ID to run a single model; omit to run all cached models.
 //! Each model is dropped before the next one loads, so GPU memory is
@@ -63,7 +63,7 @@ struct Args {
 
     /// Write structured JSON output to this file
     #[arg(long)]
-    json: Option<PathBuf>,
+    output: Option<PathBuf>,
 }
 
 // ---------------------------------------------------------------------------
@@ -113,11 +113,11 @@ fn run() -> candle_mi::Result<()> {
 
     // If a model ID is provided, run only that model
     if let Some(ref model_id) = args.model {
-        return run_single_model(model_id, prompt, top_k, args.json.as_deref());
+        return run_single_model(model_id, prompt, top_k, args.output.as_deref());
     }
 
-    if args.json.is_some() {
-        eprintln!("Warning: --json is only supported with a specific model ID; ignoring.");
+    if args.output.is_some() {
+        eprintln!("Warning: --output is only supported with a specific model ID; ignoring.");
     }
 
     // Otherwise, discover and run all cached models
