@@ -82,6 +82,7 @@ impl LogitLensAnalysis {
         self.layer_results
             .iter()
             .filter_map(|r| r.predictions.first())
+            // BORROW: explicit .as_str() — &str from String field
             .map(|p| (p.token.as_str(), p.probability))
             .collect()
     }

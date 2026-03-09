@@ -373,6 +373,7 @@ fn argmax(logits: &Tensor) -> Result<u32> {
         .max_by(|(_, a), (_, b)| a.partial_cmp(b).unwrap_or(std::cmp::Ordering::Equal))
         .ok_or_else(|| MIError::Model(candle_core::Error::Msg("empty logits".into())))?;
 
+    // CAST: usize → u32, vocab size fits in u32 (max ~250K tokens)
     #[allow(clippy::cast_possible_truncation, clippy::as_conversions)]
     Ok(max_idx as u32)
 }
@@ -406,12 +407,14 @@ fn sample_with_temperature(logits: &Tensor, temperature: f32) -> Result<u32> {
     for (idx, &p) in probs.iter().enumerate() {
         cumsum += p;
         if r < cumsum {
+            // CAST: usize → u32, vocab index fits in u32
             #[allow(clippy::cast_possible_truncation, clippy::as_conversions)]
             return Ok(idx as u32);
         }
     }
 
     // Fallback to last token (floating-point rounding edge case).
+    // CAST: usize → u32, vocab index fits in u32
     #[allow(clippy::cast_possible_truncation, clippy::as_conversions)]
     Ok((probs.len() - 1) as u32)
 }
@@ -451,6 +454,7 @@ pub fn extract_token_prob(logits: &Tensor, token_id: u32) -> Result<f32> {
     };
 
     let probs = candle_nn::ops::softmax_last_dim(&last_logits)?;
+    // CAST: u32 → usize, token ID used as tensor index
     #[allow(clippy::as_conversions)]
     let prob = probs.i(token_id as usize)?.to_scalar::<f32>()?;
     Ok(prob)
@@ -530,6 +534,7 @@ fn resolve_safetensors_paths(
 
         let mut paths = Vec::with_capacity(shard_names.len());
         for shard_name in &shard_names {
+            // BORROW: explicit .as_str() — &str from String for HashMap lookup
             let path = files.get(shard_name.as_str()).ok_or_else(|| {
                 MIError::Model(candle_core::Error::Msg(format!(
                     "shard {shard_name} not found in downloaded files"

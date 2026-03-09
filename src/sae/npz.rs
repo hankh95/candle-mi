@@ -77,6 +77,7 @@ fn parse_npy(bytes: &[u8]) -> Result<NpyArray> {
                 .get(9)
                 .ok_or_else(|| MIError::Config("NPY v1: truncated header length".into()))?;
             let len = u16::from_le_bytes([lo, hi]);
+            // CAST: u16 → usize, header length always fits
             #[allow(clippy::as_conversions, clippy::cast_possible_truncation)]
             (len as usize, 10_usize + len as usize)
         }
@@ -95,6 +96,7 @@ fn parse_npy(bytes: &[u8]) -> Result<NpyArray> {
                 *b.get(3)
                     .ok_or_else(|| MIError::Config("NPY v2: missing header byte".into()))?,
             ]);
+            // CAST: u32 → usize, header length always fits on 64-bit
             #[allow(clippy::as_conversions)]
             (len as usize, 12_usize + len as usize)
         }
@@ -119,6 +121,7 @@ fn parse_npy(bytes: &[u8]) -> Result<NpyArray> {
         ));
     }
 
+    // BORROW: explicit .as_str() — &str from String for match
     let (bytes_per_element, is_f64) = match descr.as_str() {
         "<f4" | "=f4" | "f4" => (4, false),
         "<f8" | "=f8" | "f8" => (8, true),
@@ -257,6 +260,7 @@ fn npy_to_tensor(npy: &NpyArray, device: &Device) -> Result<Tensor> {
                 .data
                 .get(start..start + 8)
                 .ok_or_else(|| MIError::Config("NPY f64 data truncated".into()))?;
+            // CAST: f64 → f32, precision loss acceptable for SAE weight values
             // PROMOTE: f64 → f32 (precision loss is expected and acceptable)
             #[allow(clippy::cast_possible_truncation, clippy::as_conversions)]
             let v = f64::from_le_bytes(
@@ -381,6 +385,7 @@ mod tests {
         npy.extend_from_slice(NPY_MAGIC);
         npy.push(1); // major
         npy.push(0); // minor
+        // CAST: usize → u16, NPY v1 header length is always < 65536
         #[allow(clippy::cast_possible_truncation)]
         let len_bytes = (padded_len as u16).to_le_bytes();
         npy.extend_from_slice(&len_bytes);
