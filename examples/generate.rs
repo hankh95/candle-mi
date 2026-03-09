@@ -3,33 +3,41 @@
 //! Autoregressive text generation with greedy decoding.
 //!
 //! ```bash
-//! cargo run --release --features transformer --example generate
+//! # Run on a specific model
+//! cargo run --release --features transformer --example generate -- "meta-llama/Llama-3.2-1B"
+//!
+//! # Run on all cached models (no argument)
+//! cargo run --release --features transformer,mmap --example generate
 //! ```
 //!
 //! **What it does:**
 //!
-//! 1. Scans the local `HuggingFace` Hub cache for supported transformers.
-//! 2. For each cached model, tokenizes the prompt *"The capital of France
-//!    is"* and runs a greedy autoregressive generation loop (temperature 0)
-//!    for up to 20 tokens, printing each token as it is produced.
-//! 3. Builds a [`GenerationResult`](candle_mi::GenerationResult) and
-//!    prints a summary.
+//! 1. Loads a transformer via
+//!    [`MIModel::from_pretrained`](candle_mi::MIModel::from_pretrained).
+//! 2. Tokenizes the prompt *"The capital of France is"*.
+//! 3. Runs a greedy autoregressive generation loop (temperature 0) for
+//!    up to 20 tokens, printing each token as it is produced.
+//! 4. Builds a [`GenerationResult`](candle_mi::GenerationResult) and
+//!    prints a summary with timing.
 //!
 //! The forward pass recomputes the full sequence at every step (no KV
 //! cache).  This is intentional: candle-mi prioritises interpretability
 //! (all activations available for analysis) over inference speed.
 //!
+//! Pass a model ID to run a single model; omit to run all cached models.
 //! Each model is dropped before the next one loads, so GPU memory is
 //! reused.
 
 #![allow(clippy::doc_markdown)]
 #![allow(clippy::missing_docs_in_private_items)]
 #![allow(clippy::unnecessary_wraps)]
+#![allow(clippy::cast_precision_loss)]
 
 use candle_mi::{
     GenerationResult, HookSpec, MIModel, MITokenizer, SUPPORTED_MODEL_TYPES, sample_token,
 };
 use std::path::{Path, PathBuf};
+use std::time::Instant;
 
 fn main() {
     if let Err(e) = run() {
@@ -41,8 +49,17 @@ fn main() {
 fn run() -> candle_mi::Result<()> {
     let prompt = "The capital of France is";
     let max_new_tokens: usize = 20;
+    let args: Vec<String> = std::env::args().collect();
 
-    // 1. Discover cached models
+    // If a model ID is provided, run only that model
+    if args.len() > 1 {
+        // INDEX: args[1] is safe — checked len() > 1 above
+        #[allow(clippy::indexing_slicing)]
+        let model_id = &args[1];
+        return run_single_model(model_id, prompt, max_new_tokens);
+    }
+
+    // Otherwise, discover and run all cached models
     let cached = discover_cached_models();
     if cached.is_empty() {
         println!("No cached transformer models found in the HuggingFace Hub cache.");
@@ -56,13 +73,55 @@ fn run() -> candle_mi::Result<()> {
         cached.len()
     );
 
-    // 2. Generate with each model
     for (model_id, model_type, snapshot) in &cached {
         println!("=== {model_id} (model_type: {model_type}) ===");
         if let Err(e) = run_model(model_id, snapshot, prompt, max_new_tokens) {
             println!("  Skipped: {e}\n");
         }
     }
+
+    Ok(())
+}
+
+// ---------------------------------------------------------------------------
+// Single model (by ID)
+// ---------------------------------------------------------------------------
+
+/// Load a model by ID, generate tokens, and print results.
+fn run_single_model(model_id: &str, prompt: &str, max_new_tokens: usize) -> candle_mi::Result<()> {
+    println!("=== {model_id} ===");
+
+    let t0 = Instant::now();
+    let model = MIModel::from_pretrained(model_id)?;
+    let load_time = t0.elapsed();
+
+    let n_layers = model.num_layers();
+    let hidden = model.hidden_size();
+    // CAST: usize → f64, values are small enough for exact representation
+    #[allow(clippy::cast_precision_loss, clippy::as_conversions)]
+    let weight_mb = estimate_weight_mb(n_layers, hidden, model.num_heads());
+    println!(
+        "  Layers: {n_layers}, hidden: {hidden}, device: {:?}",
+        model.device()
+    );
+    println!("  Estimated F32 weight size: {weight_mb:.0} MB");
+    println!("  Load time: {load_time:.2?}");
+
+    let tokenizer = model.tokenizer().ok_or(candle_mi::MIError::Tokenizer(
+        "model has no embedded tokenizer".into(),
+    ))?;
+
+    let prompt_tokens = tokenizer.encode(prompt)?;
+
+    let t1 = Instant::now();
+    let result = generate(&model, tokenizer, &prompt_tokens, max_new_tokens)?;
+    let gen_time = t1.elapsed();
+
+    println!("\n  --- Generation Result ---");
+    println!("  Prompt tokens : {}", result.prompt_tokens.len());
+    println!("  Generated     : {}", result.generated_tokens.len());
+    println!("  Generation time: {gen_time:.2?}");
+    println!("  Full text     : \"{}\"", result.full_text);
 
     Ok(())
 }
@@ -149,23 +208,32 @@ fn discover_cached_models() -> Vec<(String, String, PathBuf)> {
 }
 
 // ---------------------------------------------------------------------------
-// Per-model generation
+// Per-model generation (cache discovery mode)
 // ---------------------------------------------------------------------------
 
-/// Load a model, generate tokens, and print results.
+/// Load a model from a snapshot, generate tokens, and print results.
 fn run_model(
     model_id: &str,
     snapshot: &Path,
     prompt: &str,
     max_new_tokens: usize,
 ) -> candle_mi::Result<()> {
+    let t0 = Instant::now();
     let model = MIModel::from_pretrained(model_id)?;
+    let load_time = t0.elapsed();
+
+    let n_layers = model.num_layers();
+    let hidden = model.hidden_size();
+    // CAST: usize → f64, values are small enough for exact representation
+    #[allow(clippy::cast_precision_loss, clippy::as_conversions)]
+    let weight_mb = estimate_weight_mb(n_layers, hidden, model.num_heads());
     println!(
         "  {} layers, {} hidden, device: {:?}",
-        model.num_layers(),
-        model.hidden_size(),
+        n_layers,
+        hidden,
         model.device()
     );
+    println!("  Estimated F32 weight size: {weight_mb:.0} MB  |  Load: {load_time:.2?}");
 
     let tokenizer_path = snapshot.join("tokenizer.json");
     if !tokenizer_path.exists() {
@@ -177,12 +245,18 @@ fn run_model(
 
     let prompt_tokens = tokenizer.encode(prompt)?;
 
+    let t1 = Instant::now();
     let result = generate(&model, &tokenizer, &prompt_tokens, max_new_tokens)?;
+    let gen_time = t1.elapsed();
 
-    println!("\n  --- Generation Result ---");
-    println!("  Prompt tokens : {}", result.prompt_tokens.len());
-    println!("  Generated     : {}", result.generated_tokens.len());
-    println!("  Full text     : \"{}\"", result.full_text);
+    println!("  --- Result (generation: {gen_time:.2?}) ---");
+    println!(
+        "  {} prompt + {} generated = {} total tokens",
+        result.prompt_tokens.len(),
+        result.generated_tokens.len(),
+        result.total_tokens
+    );
+    println!("  Full text: \"{}\"", result.full_text);
     println!();
 
     Ok(())
@@ -246,4 +320,22 @@ fn generate(
         generated_tokens,
         total_tokens: tokens.len(),
     })
+}
+
+// ---------------------------------------------------------------------------
+// Helpers
+// ---------------------------------------------------------------------------
+
+/// Rough estimate of F32 weight memory in MB.
+///
+/// Uses the formula: `n_layers * (12 * hidden^2) * 4 bytes / 1e6`.
+/// This approximates the dominant weight matrices (QKV, O, gate, up, down)
+/// per transformer layer. The actual size varies by architecture.
+#[allow(clippy::cast_precision_loss, clippy::as_conversions)]
+fn estimate_weight_mb(n_layers: usize, hidden: usize, _n_heads: usize) -> f64 {
+    // Each layer has ~12 * hidden^2 parameters (QKV + O + gate + up + down)
+    let params_per_layer = 12.0 * (hidden as f64) * (hidden as f64);
+    let total_params = (n_layers as f64) * params_per_layer;
+    // F32 = 4 bytes per param, convert to MB
+    total_params * 4.0 / 1_000_000.0
 }

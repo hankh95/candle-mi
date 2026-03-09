@@ -3,22 +3,26 @@
 //! Logit lens: track how the final prediction forms layer by layer.
 //!
 //! ```bash
-//! cargo run --release --features transformer --example logit_lens
+//! # Run on a specific model
+//! cargo run --release --features transformer --example logit_lens -- "meta-llama/Llama-3.2-1B"
+//!
+//! # Run on all cached models (no argument)
+//! cargo run --release --features transformer,mmap --example logit_lens
 //! ```
 //!
 //! **What it does:**
 //!
-//! 1. Scans the local `HuggingFace` Hub cache for supported transformers.
-//! 2. For each cached model, captures the residual stream
+//! 1. Loads a transformer and captures the residual stream
 //!    ([`HookPoint::ResidPost`](candle_mi::HookPoint::ResidPost)) at every
 //!    layer in a single forward pass.
-//! 3. Projects each layer's hidden state through the unembedding matrix via
+//! 2. Projects each layer's hidden state through the unembedding matrix via
 //!    [`MIModel::project_to_vocab`](candle_mi::MIModel::project_to_vocab),
 //!    applies softmax, and collects the top-k predictions.
-//! 4. Builds a [`LogitLensAnalysis`](candle_mi::LogitLensAnalysis) and
+//! 3. Builds a [`LogitLensAnalysis`](candle_mi::LogitLensAnalysis) and
 //!    prints both a summary and a detailed view, plus the first layer at
 //!    which the expected answer token appears.
 //!
+//! Pass a model ID to run a single model; omit to run all cached models.
 //! Each model is dropped before the next one loads, so GPU memory is
 //! reused.
 
@@ -33,6 +37,7 @@ use candle_mi::{
     SUPPORTED_MODEL_TYPES,
 };
 use std::path::{Path, PathBuf};
+use std::time::Instant;
 
 fn main() {
     if let Err(e) = run() {
@@ -44,8 +49,17 @@ fn main() {
 fn run() -> candle_mi::Result<()> {
     let prompt = "The capital of France is";
     let top_k: usize = 10;
+    let args: Vec<String> = std::env::args().collect();
 
-    // 1. Discover cached models
+    // If a model ID is provided, run only that model
+    if args.len() > 1 {
+        // INDEX: args[1] is safe — checked len() > 1 above
+        #[allow(clippy::indexing_slicing)]
+        let model_id = &args[1];
+        return run_single_model(model_id, prompt, top_k);
+    }
+
+    // Otherwise, discover and run all cached models
     let cached = discover_cached_models();
     if cached.is_empty() {
         println!("No cached transformer models found in the HuggingFace Hub cache.");
@@ -59,7 +73,6 @@ fn run() -> candle_mi::Result<()> {
         cached.len()
     );
 
-    // 2. Run logit lens on each model
     for (model_id, model_type, snapshot) in &cached {
         println!("=== {model_id} (model_type: {model_type}) ===");
         if let Err(e) = run_model(model_id, snapshot, prompt, top_k) {
@@ -68,6 +81,37 @@ fn run() -> candle_mi::Result<()> {
     }
 
     Ok(())
+}
+
+// ---------------------------------------------------------------------------
+// Single model (by ID)
+// ---------------------------------------------------------------------------
+
+/// Load a model by ID, run logit lens, and print results.
+fn run_single_model(model_id: &str, prompt: &str, top_k: usize) -> candle_mi::Result<()> {
+    println!("=== {model_id} ===");
+
+    let t0 = Instant::now();
+    let model = MIModel::from_pretrained(model_id)?;
+    let load_time = t0.elapsed();
+
+    let n_layers = model.num_layers();
+    let hidden = model.hidden_size();
+    // CAST: usize → f64, values are small enough for exact representation
+    #[allow(clippy::cast_precision_loss, clippy::as_conversions)]
+    let weight_mb = estimate_weight_mb(n_layers, hidden);
+    println!(
+        "  Layers: {n_layers}, hidden: {hidden}, device: {:?}",
+        model.device()
+    );
+    println!("  Estimated F32 weight size: {weight_mb:.0} MB");
+    println!("  Load time: {load_time:.2?}");
+
+    let tokenizer = model.tokenizer().ok_or(candle_mi::MIError::Tokenizer(
+        "model has no embedded tokenizer".into(),
+    ))?;
+
+    run_logit_lens(&model, tokenizer, prompt, n_layers, top_k)
 }
 
 // ---------------------------------------------------------------------------
@@ -152,19 +196,27 @@ fn discover_cached_models() -> Vec<(String, String, PathBuf)> {
 }
 
 // ---------------------------------------------------------------------------
-// Per-model logit lens
+// Per-model logit lens (cache discovery mode)
 // ---------------------------------------------------------------------------
 
-/// Load a model, run logit lens, and print the analysis.
+/// Load a model from a snapshot, run logit lens, and print the analysis.
 fn run_model(model_id: &str, snapshot: &Path, prompt: &str, top_k: usize) -> candle_mi::Result<()> {
+    let t0 = Instant::now();
     let model = MIModel::from_pretrained(model_id)?;
+    let load_time = t0.elapsed();
+
     let n_layers = model.num_layers();
+    let hidden = model.hidden_size();
+    // CAST: usize → f64, values are small enough for exact representation
+    #[allow(clippy::cast_precision_loss, clippy::as_conversions)]
+    let weight_mb = estimate_weight_mb(n_layers, hidden);
     println!(
         "  {} layers, {} hidden, device: {:?}",
         n_layers,
-        model.hidden_size(),
+        hidden,
         model.device()
     );
+    println!("  Estimated F32 weight size: {weight_mb:.0} MB  |  Load: {load_time:.2?}");
 
     let tokenizer_path = snapshot.join("tokenizer.json");
     if !tokenizer_path.exists() {
@@ -174,6 +226,21 @@ fn run_model(model_id: &str, snapshot: &Path, prompt: &str, top_k: usize) -> can
     }
     let tokenizer = MITokenizer::from_hf_path(tokenizer_path)?;
 
+    run_logit_lens(&model, &tokenizer, prompt, n_layers, top_k)
+}
+
+// ---------------------------------------------------------------------------
+// Core logit lens logic
+// ---------------------------------------------------------------------------
+
+/// Run logit lens analysis on an already-loaded model.
+fn run_logit_lens(
+    model: &MIModel,
+    tokenizer: &MITokenizer,
+    prompt: &str,
+    n_layers: usize,
+    top_k: usize,
+) -> candle_mi::Result<()> {
     // Encode prompt
     let token_ids = tokenizer.encode(prompt)?;
     let input = candle_core::Tensor::new(&token_ids[..], model.device())?.unsqueeze(0)?; // [1, seq]
@@ -186,10 +253,13 @@ fn run_model(model_id: &str, snapshot: &Path, prompt: &str, top_k: usize) -> can
     }
 
     // Single forward pass with all captures
+    let t1 = Instant::now();
     let cache = model.forward(&input, &hooks)?;
+    let forward_time = t1.elapsed();
+    println!("  Forward pass ({n_layers} captures): {forward_time:.2?}");
 
     // Build logit lens analysis
-    let analysis = build_analysis(&model, &tokenizer, &cache, prompt, n_layers, top_k)?;
+    let analysis = build_analysis(model, tokenizer, &cache, prompt, n_layers, top_k)?;
 
     // Print results
     analysis.print_summary();
@@ -207,10 +277,6 @@ fn run_model(model_id: &str, snapshot: &Path, prompt: &str, top_k: usize) -> can
 
     Ok(())
 }
-
-// ---------------------------------------------------------------------------
-// Analysis builder
-// ---------------------------------------------------------------------------
 
 /// Project each layer's residual stream to vocabulary and build a
 /// [`LogitLensAnalysis`].
@@ -264,4 +330,16 @@ fn build_analysis(
     }
 
     Ok(analysis)
+}
+
+// ---------------------------------------------------------------------------
+// Helpers
+// ---------------------------------------------------------------------------
+
+/// Rough estimate of F32 weight memory in MB.
+#[allow(clippy::cast_precision_loss, clippy::as_conversions)]
+fn estimate_weight_mb(n_layers: usize, hidden: usize) -> f64 {
+    let params_per_layer = 12.0 * (hidden as f64) * (hidden as f64);
+    let total_params = (n_layers as f64) * params_per_layer;
+    total_params * 4.0 / 1_000_000.0
 }

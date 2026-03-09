@@ -4,17 +4,20 @@
 //! the impact on predictions.
 //!
 //! ```bash
-//! cargo run --release --features transformer --example attention_knockout
+//! # Run on a specific model
+//! cargo run --release --features transformer --example attention_knockout -- "meta-llama/Llama-3.2-1B"
+//!
+//! # Run on all cached models (no argument)
+//! cargo run --release --features transformer,mmap --example attention_knockout
 //! ```
 //!
 //! **What it does:**
 //!
-//! 1. Scans the local `HuggingFace` Hub cache for supported transformers.
-//! 2. For each cached model, runs a **baseline** forward pass and an
+//! 1. Loads a transformer and runs a **baseline** forward pass and an
 //!    **ablated** forward pass where all attention heads at a middle layer
 //!    are knocked out for the last token position (the query position that
 //!    produces the next-token prediction).
-//! 3. Builds an [`AblationResult`](candle_mi::AblationResult) and prints:
+//! 2. Builds an [`AblationResult`](candle_mi::AblationResult) and prints:
 //!    - KL divergence between baseline and ablated distributions,
 //!    - logit diff for the expected answer token,
 //!    - top-10 tokens whose probabilities changed the most.
@@ -23,6 +26,7 @@
 //! attention scores via [`Intervention::Knockout`](candle_mi::Intervention),
 //! zeroing out the targeted attention edges after softmax.
 //!
+//! Pass a model ID to run a single model; omit to run all cached models.
 //! Each model is dropped before the next one loads, so GPU memory is
 //! reused.
 
@@ -37,6 +41,7 @@ use candle_mi::{
     SUPPORTED_MODEL_TYPES,
 };
 use std::path::{Path, PathBuf};
+use std::time::Instant;
 
 fn main() {
     if let Err(e) = run() {
@@ -47,8 +52,17 @@ fn main() {
 
 fn run() -> candle_mi::Result<()> {
     let prompt = "The capital of France is";
+    let args: Vec<String> = std::env::args().collect();
 
-    // 1. Discover cached models
+    // If a model ID is provided, run only that model
+    if args.len() > 1 {
+        // INDEX: args[1] is safe — checked len() > 1 above
+        #[allow(clippy::indexing_slicing)]
+        let model_id = &args[1];
+        return run_single_model(model_id, prompt);
+    }
+
+    // Otherwise, discover and run all cached models
     let cached = discover_cached_models();
     if cached.is_empty() {
         println!("No cached transformer models found in the HuggingFace Hub cache.");
@@ -62,7 +76,6 @@ fn run() -> candle_mi::Result<()> {
         cached.len()
     );
 
-    // 2. Run knockout experiment on each model
     for (model_id, model_type, snapshot) in &cached {
         println!("=== {model_id} (model_type: {model_type}) ===");
         if let Err(e) = run_model(model_id, snapshot, prompt) {
@@ -71,6 +84,38 @@ fn run() -> candle_mi::Result<()> {
     }
 
     Ok(())
+}
+
+// ---------------------------------------------------------------------------
+// Single model (by ID)
+// ---------------------------------------------------------------------------
+
+/// Load a model by ID, run knockout experiment, and print results.
+fn run_single_model(model_id: &str, prompt: &str) -> candle_mi::Result<()> {
+    println!("=== {model_id} ===");
+
+    let t0 = Instant::now();
+    let model = MIModel::from_pretrained(model_id)?;
+    let load_time = t0.elapsed();
+
+    let n_layers = model.num_layers();
+    let n_heads = model.num_heads();
+    let hidden = model.hidden_size();
+    // CAST: usize → f64, values are small enough for exact representation
+    #[allow(clippy::cast_precision_loss, clippy::as_conversions)]
+    let weight_mb = estimate_weight_mb(n_layers, hidden);
+    println!(
+        "  Layers: {n_layers}, heads: {n_heads}, hidden: {hidden}, device: {:?}",
+        model.device()
+    );
+    println!("  Estimated F32 weight size: {weight_mb:.0} MB");
+    println!("  Load time: {load_time:.2?}");
+
+    let tokenizer = model.tokenizer().ok_or(candle_mi::MIError::Tokenizer(
+        "model has no embedded tokenizer".into(),
+    ))?;
+
+    run_knockout(&model, tokenizer, prompt)
 }
 
 // ---------------------------------------------------------------------------
@@ -155,21 +200,29 @@ fn discover_cached_models() -> Vec<(String, String, PathBuf)> {
 }
 
 // ---------------------------------------------------------------------------
-// Per-model knockout experiment
+// Per-model knockout experiment (cache discovery mode)
 // ---------------------------------------------------------------------------
 
-/// Load a model, run baseline vs. ablated, and print the analysis.
+/// Load a model from a snapshot, run knockout, and print the analysis.
 fn run_model(model_id: &str, snapshot: &Path, prompt: &str) -> candle_mi::Result<()> {
+    let t0 = Instant::now();
     let model = MIModel::from_pretrained(model_id)?;
+    let load_time = t0.elapsed();
+
     let n_layers = model.num_layers();
     let n_heads = model.num_heads();
+    let hidden = model.hidden_size();
+    // CAST: usize → f64, values are small enough for exact representation
+    #[allow(clippy::cast_precision_loss, clippy::as_conversions)]
+    let weight_mb = estimate_weight_mb(n_layers, hidden);
     println!(
         "  {} layers, {} heads, {} hidden, device: {:?}",
         n_layers,
         n_heads,
-        model.hidden_size(),
+        hidden,
         model.device()
     );
+    println!("  Estimated F32 weight size: {weight_mb:.0} MB  |  Load: {load_time:.2?}");
 
     let tokenizer_path = snapshot.join("tokenizer.json");
     if !tokenizer_path.exists() {
@@ -178,6 +231,18 @@ fn run_model(model_id: &str, snapshot: &Path, prompt: &str) -> candle_mi::Result
         ));
     }
     let tokenizer = MITokenizer::from_hf_path(tokenizer_path)?;
+
+    run_knockout(&model, &tokenizer, prompt)
+}
+
+// ---------------------------------------------------------------------------
+// Core knockout logic
+// ---------------------------------------------------------------------------
+
+/// Run baseline vs. ablated forward passes and print analysis.
+fn run_knockout(model: &MIModel, tokenizer: &MITokenizer, prompt: &str) -> candle_mi::Result<()> {
+    let n_layers = model.num_layers();
+    let n_heads = model.num_heads();
 
     // Encode prompt
     let token_ids = tokenizer.encode(prompt)?;
@@ -190,7 +255,9 @@ fn run_model(model_id: &str, snapshot: &Path, prompt: &str) -> candle_mi::Result
     println!("  Knockout: all {n_heads} heads at layer {target_layer}, last query position\n");
 
     // --- Baseline forward pass ---
+    let t1 = Instant::now();
     let baseline_cache = model.forward(&input, &HookSpec::new())?;
+    let baseline_time = t1.elapsed();
     let baseline_logits = baseline_cache.output().get(0)?.get(seq_len - 1)?; // [vocab]
 
     // --- Build knockout: all heads at target_layer, FROM last position ---
@@ -213,8 +280,13 @@ fn run_model(model_id: &str, snapshot: &Path, prompt: &str) -> candle_mi::Result
     );
 
     // --- Ablated forward pass ---
+    let t2 = Instant::now();
     let ablated_cache = model.forward(&input, &ablated_hooks)?;
+    let ablated_time = t2.elapsed();
     let ablated_logits = ablated_cache.output().get(0)?.get(seq_len - 1)?; // [vocab]
+
+    println!("  Baseline forward : {baseline_time:.2?}");
+    println!("  Ablated forward  : {ablated_time:.2?}");
 
     // --- Analysis ---
     let result = AblationResult::new(baseline_logits, ablated_logits, spec);
@@ -250,4 +322,16 @@ fn run_model(model_id: &str, snapshot: &Path, prompt: &str) -> candle_mi::Result
     println!();
 
     Ok(())
+}
+
+// ---------------------------------------------------------------------------
+// Helpers
+// ---------------------------------------------------------------------------
+
+/// Rough estimate of F32 weight memory in MB.
+#[allow(clippy::cast_precision_loss, clippy::as_conversions)]
+fn estimate_weight_mb(n_layers: usize, hidden: usize) -> f64 {
+    let params_per_layer = 12.0 * (hidden as f64) * (hidden as f64);
+    let total_params = (n_layers as f64) * params_per_layer;
+    total_params * 4.0 / 1_000_000.0
 }

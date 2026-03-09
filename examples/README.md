@@ -37,14 +37,23 @@ cargo run --release --features transformer --example auto_config_dogfood -- "met
 # Auto-config dogfooding — failure (unsupported architecture)
 cargo run --release --features transformer --example auto_config_dogfood -- "allenai/OLMo-1B-hf"
 
-# Greedy text generation on all cached models
-cargo run --release --features transformer --example generate
+# Greedy text generation — single model (recommended for 7B+ to avoid OOM)
+cargo run --release --features transformer --example generate -- "meta-llama/Llama-3.2-1B"
 
-# Logit lens on all cached models
-cargo run --release --features transformer --example logit_lens
+# Greedy text generation — all cached models (add mmap for sharded weights)
+cargo run --release --features transformer,mmap --example generate
 
-# Attention knockout on all cached models
-cargo run --release --features transformer --example attention_knockout
+# Logit lens — single model
+cargo run --release --features transformer --example logit_lens -- "meta-llama/Llama-3.2-1B"
+
+# Logit lens — all cached models
+cargo run --release --features transformer,mmap --example logit_lens
+
+# Attention knockout — single model
+cargo run --release --features transformer --example attention_knockout -- "meta-llama/Llama-3.2-1B"
+
+# Attention knockout — all cached models
+cargo run --release --features transformer,mmap --example attention_knockout
 
 # Figure 13 replication — Llama 3.2 1B (default)
 cargo run --release --features clt,transformer --example figure13_planning_poems
