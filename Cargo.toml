@@ -99,6 +99,10 @@ required-features = ["clt", "transformer"]
 name = "generate"
 required-features = ["transformer"]
 
+[[example]]
+name = "logit_lens"
+required-features = ["transformer"]
+
 [features]
 default = ["cuda", "transformer"]
 cuda = ["candle-core/cuda", "candle-nn/cuda"]
