@@ -29,6 +29,7 @@
 //! cargo run --release --features rwkv,rwkv-tokenizer --example rwkv_inference -- "RWKV/v6-Finch-1B6-HF"
 //! ```
 
+#![allow(clippy::doc_markdown)]
 #![allow(clippy::cast_precision_loss)]
 #![allow(clippy::too_many_lines)]
 #![allow(clippy::missing_docs_in_private_items)]
@@ -134,6 +135,7 @@ fn run_single_model(model_id: &str) -> candle_mi::Result<()> {
 
     let logits = result.output();
     let last_logits = logits.i((0, seq_len - 1))?;
+    // PROMOTE: logits may be BF16; F32 for sorting and display precision
     let last_logits_f32 = last_logits.to_dtype(DType::F32)?;
     let logits_vec: Vec<f32> = last_logits_f32.to_vec1()?;
 
@@ -147,6 +149,7 @@ fn run_single_model(model_id: &str) -> candle_mi::Result<()> {
     println!("  {:>4}  {:>8}  {:>10}  Token", "Rank", "ID", "Logit");
     println!("  {}", "-".repeat(40));
     for (rank, (idx, logit)) in indexed.iter().take(10).enumerate() {
+        // CAST: usize → u32, token ID fits in u32 (vocab size < 2^32)
         #[allow(clippy::cast_possible_truncation, clippy::as_conversions)]
         let token_str = tokenizer
             .decode(&[*idx as u32])
@@ -256,7 +259,7 @@ fn load_rwkv_tokenizer(model_id: &str) -> candle_mi::Result<MITokenizer> {
     const RWKV_VOCAB_FILE: &str = "rwkv_vocab_v20230424.txt";
 
     let cache_dir = hf_cache_dir().ok_or_else(|| {
-        candle_mi::MIError::Tokenizer("cannot find HuggingFace cache directory".into())
+        candle_mi::MIError::Tokenizer("HuggingFace cache directory not found".into())
     })?;
     let snapshot = find_snapshot(&cache_dir, model_id).ok_or_else(|| {
         candle_mi::MIError::Tokenizer(format!("{model_id} not found in HF cache"))

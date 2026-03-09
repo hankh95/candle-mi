@@ -393,6 +393,7 @@ fn run() -> candle_mi::Result<()> {
 fn load_transformer(
     model_id: &str,
 ) -> candle_mi::Result<(GenericTransformer, MITokenizer, TransformerConfig)> {
+    // BORROW: explicit .to_owned() — &str → String for download API
     let files = hf_fetch_model::download_files_blocking(model_id.to_owned())
         .map(hf_fetch_model::DownloadOutcome::into_inner)
         .map_err(|e| candle_mi::MIError::Download(e.to_string()))?;
@@ -401,9 +402,9 @@ fn load_transformer(
         .get("config.json")
         .ok_or_else(|| candle_mi::MIError::Config("config.json not found".into()))?;
     let config_str = std::fs::read_to_string(config_path)
-        .map_err(|e| candle_mi::MIError::Config(format!("read config.json: {e}")))?;
+        .map_err(|e| candle_mi::MIError::Config(format!("failed to read config.json: {e}")))?;
     let json: serde_json::Value = serde_json::from_str(&config_str)
-        .map_err(|e| candle_mi::MIError::Config(format!("parse config.json: {e}")))?;
+        .map_err(|e| candle_mi::MIError::Config(format!("failed to parse config.json: {e}")))?;
 
     let config = TransformerConfig::from_hf_config(&json)?;
 
@@ -430,9 +431,9 @@ fn resolve_safetensors_paths(
     // Try sharded first
     if let Some(index_path) = files.get("model.safetensors.index.json") {
         let index_str = std::fs::read_to_string(index_path)
-            .map_err(|e| candle_mi::MIError::Config(format!("read index: {e}")))?;
+            .map_err(|e| candle_mi::MIError::Config(format!("failed to read index: {e}")))?;
         let index: serde_json::Value = serde_json::from_str(&index_str)
-            .map_err(|e| candle_mi::MIError::Config(format!("parse index: {e}")))?;
+            .map_err(|e| candle_mi::MIError::Config(format!("failed to parse index: {e}")))?;
         let weight_map = index
             .get("weight_map")
             .and_then(serde_json::Value::as_object)
@@ -487,8 +488,9 @@ fn create_var_builder(
         let path = paths
             .first()
             .ok_or_else(|| candle_mi::MIError::Config("no safetensors files".into()))?;
-        let data = std::fs::read(path)
-            .map_err(|e| candle_mi::MIError::Config(format!("read {}: {e}", path.display())))?;
+        let data = std::fs::read(path).map_err(|e| {
+            candle_mi::MIError::Config(format!("failed to read {}: {e}", path.display()))
+        })?;
         let vb = candle_nn::VarBuilder::from_buffered_safetensors(data, dtype, device)?;
         Ok(vb)
     }
