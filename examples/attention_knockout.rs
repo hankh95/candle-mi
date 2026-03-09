@@ -14,9 +14,8 @@
 //! **What it does:**
 //!
 //! 1. Loads a transformer and runs a **baseline** forward pass and an
-//!    **ablated** forward pass where all attention heads at a middle layer
-//!    are knocked out for the last token position (the query position that
-//!    produces the next-token prediction).
+//!    **ablated** forward pass where a specific attention edge (last token
+//!    → first token) is knocked out across all heads at a middle layer.
 //! 2. Builds an [`AblationResult`](candle_mi::AblationResult) and prints:
 //!    - KL divergence between baseline and ablated distributions,
 //!    - logit diff for the expected answer token,
@@ -250,9 +249,22 @@ fn run_knockout(model: &MIModel, tokenizer: &MITokenizer, prompt: &str) -> candl
     let input = candle_core::Tensor::new(&token_ids[..], model.device())?.unsqueeze(0)?; // [1, seq]
     println!("  Prompt: \"{prompt}\" ({seq_len} tokens)");
 
-    // Target a middle layer for knockout
+    // Target a middle layer for knockout.
+    //
+    // Experiment: for each head at the target layer, knock out the
+    // attention edge from the last token (query) TO position 0 (the first
+    // token).  This tests how much the model relies on each head's
+    // attention to the beginning of the prompt for its next-token
+    // prediction.
+    //
+    // We knock out a single edge (last → 0) across ALL heads rather than
+    // all edges for a single head, because zeroing an entire query row
+    // produces NaN in softmax (the row sums to zero).
     let target_layer = n_layers / 2;
-    println!("  Knockout: all {n_heads} heads at layer {target_layer}, last query position\n");
+    println!(
+        "  Knockout: all {n_heads} heads at layer {target_layer}, \
+         edge (last → position 0)\n"
+    );
 
     // --- Baseline forward pass ---
     let t1 = Instant::now();
@@ -260,10 +272,8 @@ fn run_knockout(model: &MIModel, tokenizer: &MITokenizer, prompt: &str) -> candl
     let baseline_time = t1.elapsed();
     let baseline_logits = baseline_cache.output().get(0)?.get(seq_len - 1)?; // [vocab]
 
-    // --- Build knockout: all heads at target_layer, FROM last position ---
-    let spec = KnockoutSpec::new()
-        .layer(target_layer)
-        .from_position(seq_len - 1);
+    // --- Build knockout: all heads, single edge last→0 ---
+    let spec = KnockoutSpec::new().layer(target_layer).edge(seq_len - 1, 0);
 
     let mask = create_knockout_mask(
         &spec,
