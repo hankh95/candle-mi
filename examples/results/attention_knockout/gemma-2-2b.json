@@ -1,0 +1,96 @@
+{
+  "model_id": "google/gemma-2-2b",
+  "prompt": "The capital of France is",
+  "n_layers": 26,
+  "n_heads": 8,
+  "hidden_size": 2304,
+  "target_layer": 13,
+  "knockout_edge": [
+    5,
+    0
+  ],
+  "kl_divergence": 0.017049061,
+  "paris_logit_diff": -0.33103752,
+  "top_changed": [
+    {
+      "rank": 1,
+      "token_id": 7127,
+      "token": " Paris",
+      "baseline_prob": 0.038783796,
+      "ablated_prob": 0.06650263,
+      "abs_diff": 0.027718835
+    },
+    {
+      "rank": 2,
+      "token_id": 1170,
+      "token": " also",
+      "baseline_prob": 0.078236714,
+      "ablated_prob": 0.06135467,
+      "abs_diff": 0.016882043
+    },
+    {
+      "rank": 3,
+      "token_id": 974,
+      "token": " one",
+      "baseline_prob": 0.08077458,
+      "ablated_prob": 0.09295635,
+      "abs_diff": 0.012181766
+    },
+    {
+      "rank": 4,
+      "token_id": 2078,
+      "token": " home",
+      "baseline_prob": 0.050353155,
+      "ablated_prob": 0.040463258,
+      "abs_diff": 0.009889897
+    },
+    {
+      "rank": 5,
+      "token_id": 780,
+      "token": " not",
+      "baseline_prob": 0.04193192,
+      "ablated_prob": 0.033604648,
+      "abs_diff": 0.008327272
+    },
+    {
+      "rank": 6,
+      "token_id": 573,
+      "token": " the",
+      "baseline_prob": 0.100045666,
+      "ablated_prob": 0.105764166,
+      "abs_diff": 0.0057184994
+    },
+    {
+      "rank": 7,
+      "token_id": 2247,
+      "token": " full",
+      "baseline_prob": 0.026976483,
+      "ablated_prob": 0.024007458,
+      "abs_diff": 0.0029690247
+    },
+    {
+      "rank": 8,
+      "token_id": 235248,
+      "token": " ",
+      "baseline_prob": 0.007938842,
+      "ablated_prob": 0.010856795,
+      "abs_diff": 0.0029179528
+    },
+    {
+      "rank": 9,
+      "token_id": 10964,
+      "token": " famous",
+      "baseline_prob": 0.025307184,
+      "ablated_prob": 0.022753183,
+      "abs_diff": 0.0025540013
+    },
+    {
+      "rank": 10,
+      "token_id": 3836,
+      "token": " known",
+      "baseline_prob": 0.048318982,
+      "ablated_prob": 0.0502819,
+      "abs_diff": 0.0019629188
+    }
+  ]
+}

@@ -381,6 +381,11 @@ fn run_logit_lens(
         let output = build_json_output(&analysis, model_id, n_heads, hidden, paris_layer);
         let json = serde_json::to_string_pretty(&output)
             .map_err(|e| candle_mi::MIError::Config(format!("JSON serialization failed: {e}")))?;
+        if let Some(parent) = path.parent() {
+            std::fs::create_dir_all(parent).map_err(|e| {
+                candle_mi::MIError::Config(format!("failed to create {}: {e}", parent.display()))
+            })?;
+        }
         std::fs::write(path, &json).map_err(|e| {
             candle_mi::MIError::Config(format!("failed to write {}: {e}", path.display()))
         })?;

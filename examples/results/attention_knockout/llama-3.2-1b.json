@@ -1,0 +1,96 @@
+{
+  "model_id": "meta-llama/Llama-3.2-1B",
+  "prompt": "The capital of France is",
+  "n_layers": 16,
+  "n_heads": 32,
+  "hidden_size": 2048,
+  "target_layer": 8,
+  "knockout_edge": [
+    5,
+    0
+  ],
+  "kl_divergence": 0.05590993,
+  "paris_logit_diff": 0.5527973,
+  "top_changed": [
+    {
+      "rank": 1,
+      "token_id": 12366,
+      "token": " Paris",
+      "baseline_prob": 0.3934546,
+      "ablated_prob": 0.26043534,
+      "abs_diff": 0.13301927
+    },
+    {
+      "rank": 2,
+      "token_id": 264,
+      "token": " a",
+      "baseline_prob": 0.083813675,
+      "ablated_prob": 0.12875824,
+      "abs_diff": 0.044944562
+    },
+    {
+      "rank": 3,
+      "token_id": 832,
+      "token": " one",
+      "baseline_prob": 0.030767648,
+      "ablated_prob": 0.0478224,
+      "abs_diff": 0.017054753
+    },
+    {
+      "rank": 4,
+      "token_id": 279,
+      "token": " the",
+      "baseline_prob": 0.07025879,
+      "ablated_prob": 0.086290486,
+      "abs_diff": 0.016031697
+    },
+    {
+      "rank": 5,
+      "token_id": 1101,
+      "token": " also",
+      "baseline_prob": 0.03059414,
+      "ablated_prob": 0.044096835,
+      "abs_diff": 0.013502695
+    },
+    {
+      "rank": 6,
+      "token_id": 459,
+      "token": " an",
+      "baseline_prob": 0.012330725,
+      "ablated_prob": 0.021910692,
+      "abs_diff": 0.009579967
+    },
+    {
+      "rank": 7,
+      "token_id": 2162,
+      "token": " home",
+      "baseline_prob": 0.025135782,
+      "ablated_prob": 0.022168376,
+      "abs_diff": 0.002967406
+    },
+    {
+      "rank": 8,
+      "token_id": 3629,
+      "token": " often",
+      "baseline_prob": 0.011634505,
+      "ablated_prob": 0.014449166,
+      "abs_diff": 0.0028146608
+    },
+    {
+      "rank": 9,
+      "token_id": 539,
+      "token": " not",
+      "baseline_prob": 0.01659021,
+      "ablated_prob": 0.019315327,
+      "abs_diff": 0.002725117
+    },
+    {
+      "rank": 10,
+      "token_id": 7559,
+      "token": " located",
+      "baseline_prob": 0.011747584,
+      "ablated_prob": 0.013895018,
+      "abs_diff": 0.0021474343
+    }
+  ]
+}

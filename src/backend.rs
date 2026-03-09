@@ -582,11 +582,12 @@ fn buffered_var_builder(
     device: &Device,
 ) -> Result<candle_nn::VarBuilder<'static>> {
     if paths.len() > 1 {
-        return Err(MIError::Config(
-            "sharded models require the `mmap` feature: \
-             candle-mi = { features = [\"mmap\"] }"
-                .into(),
-        ));
+        return Err(MIError::Config(format!(
+            "this model is sharded across {} files and requires the `mmap` feature.\n  \
+             Library:  candle-mi = {{ features = [\"mmap\"] }}\n  \
+             Example:  cargo run --features mmap --example <name>",
+            paths.len()
+        )));
     }
     let path = paths
         .first()

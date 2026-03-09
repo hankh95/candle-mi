@@ -10,6 +10,9 @@
 //! # Run on all cached models (no argument)
 //! cargo run --release --features transformer,mmap --example attention_knockout
 //!
+//! # With JSON output
+//! cargo run --release --features transformer --example attention_knockout -- "meta-llama/Llama-3.2-1B" --output results.json
+//!
 //! # With real memory reporting (RAM + VRAM)
 //! cargo run --release --features transformer,memory --example attention_knockout -- "meta-llama/Llama-3.2-1B"
 //! ```
@@ -28,6 +31,8 @@
 //! attention scores via [`Intervention::Knockout`](candle_mi::Intervention),
 //! zeroing out the targeted attention edges after softmax.
 //!
+//! 3. Optionally writes structured JSON output via `--output <path>`.
+//!
 //! Pass a model ID to run a single model; omit to run all cached models.
 //! Each model is dropped before the next one loads, so GPU memory is
 //! reused.
@@ -36,7 +41,6 @@
 #![allow(clippy::missing_docs_in_private_items)]
 #![allow(clippy::unnecessary_wraps)]
 #![allow(clippy::cast_precision_loss)]
-
 use candle_mi::interp::intervention::create_knockout_mask;
 use candle_mi::interp::logit_lens::format_probability;
 use candle_mi::{
@@ -45,8 +49,58 @@ use candle_mi::{
 };
 #[cfg(feature = "memory")]
 use candle_mi::{MemoryReport, MemorySnapshot};
+use clap::Parser;
+use serde::Serialize;
 use std::path::{Path, PathBuf};
 use std::time::Instant;
+
+// ---------------------------------------------------------------------------
+// CLI
+// ---------------------------------------------------------------------------
+
+#[derive(Parser)]
+#[command(name = "attention_knockout")]
+#[command(about = "Attention knockout: ablate an attention edge and measure prediction impact")]
+struct Args {
+    /// `HuggingFace` model ID (omit to run all cached models)
+    model: Option<String>,
+
+    /// Write structured JSON output to this file
+    #[arg(long)]
+    output: Option<PathBuf>,
+}
+
+// ---------------------------------------------------------------------------
+// JSON output types
+// ---------------------------------------------------------------------------
+
+#[derive(Serialize)]
+struct JsonOutput {
+    model_id: String,
+    prompt: String,
+    n_layers: usize,
+    n_heads: usize,
+    hidden_size: usize,
+    target_layer: usize,
+    knockout_edge: [usize; 2],
+    kl_divergence: f32,
+    paris_logit_diff: Option<f32>,
+    top_changed: Vec<JsonChangedToken>,
+}
+
+#[derive(Serialize)]
+struct JsonChangedToken {
+    rank: usize,
+    token_id: u32,
+    token: String,
+    baseline_prob: f32,
+    ablated_prob: f32,
+    abs_diff: f32,
+}
+
+// ---------------------------------------------------------------------------
+// Main
+// ---------------------------------------------------------------------------
 
 fn main() {
     if let Err(e) = run() {
@@ -56,15 +110,16 @@ fn main() {
 }
 
 fn run() -> candle_mi::Result<()> {
+    let args = Args::parse();
     let prompt = "The capital of France is";
-    let args: Vec<String> = std::env::args().collect();
 
     // If a model ID is provided, run only that model
-    if args.len() > 1 {
-        // INDEX: args[1] is safe — checked len() > 1 above
-        #[allow(clippy::indexing_slicing)]
-        let model_id = &args[1];
-        return run_single_model(model_id, prompt);
+    if let Some(ref model_id) = args.model {
+        return run_single_model(model_id, prompt, args.output.as_deref());
+    }
+
+    if args.output.is_some() {
+        eprintln!("Warning: --output is only supported with a specific model ID; ignoring.");
     }
 
     // Otherwise, discover and run all cached models
@@ -96,7 +151,11 @@ fn run() -> candle_mi::Result<()> {
 // ---------------------------------------------------------------------------
 
 /// Load a model by ID, run knockout experiment, and print results.
-fn run_single_model(model_id: &str, prompt: &str) -> candle_mi::Result<()> {
+fn run_single_model(
+    model_id: &str,
+    prompt: &str,
+    json_path: Option<&Path>,
+) -> candle_mi::Result<()> {
     println!("=== {model_id} ===");
 
     #[cfg(feature = "memory")]
@@ -131,7 +190,9 @@ fn run_single_model(model_id: &str, prompt: &str) -> candle_mi::Result<()> {
         "model has no embedded tokenizer".into(),
     ))?;
 
-    run_knockout(&model, tokenizer, prompt)
+    run_knockout(
+        &model, tokenizer, prompt, n_layers, n_heads, hidden, model_id, json_path,
+    )
 }
 
 // ---------------------------------------------------------------------------
@@ -259,7 +320,9 @@ fn run_model(model_id: &str, snapshot: &Path, prompt: &str) -> candle_mi::Result
     }
     let tokenizer = MITokenizer::from_hf_path(tokenizer_path)?;
 
-    run_knockout(&model, &tokenizer, prompt)
+    run_knockout(
+        &model, &tokenizer, prompt, n_layers, n_heads, hidden, model_id, None,
+    )
 }
 
 // ---------------------------------------------------------------------------
@@ -267,10 +330,17 @@ fn run_model(model_id: &str, snapshot: &Path, prompt: &str) -> candle_mi::Result
 // ---------------------------------------------------------------------------
 
 /// Run baseline vs. ablated forward passes and print analysis.
-fn run_knockout(model: &MIModel, tokenizer: &MITokenizer, prompt: &str) -> candle_mi::Result<()> {
-    let n_layers = model.num_layers();
-    let n_heads = model.num_heads();
-
+#[allow(clippy::too_many_arguments)]
+fn run_knockout(
+    model: &MIModel,
+    tokenizer: &MITokenizer,
+    prompt: &str,
+    n_layers: usize,
+    n_heads: usize,
+    hidden: usize,
+    model_id: &str,
+    json_path: Option<&Path>,
+) -> candle_mi::Result<()> {
     // Encode prompt
     let token_ids = tokenizer.encode(prompt)?;
     let seq_len = token_ids.len();
@@ -334,10 +404,13 @@ fn run_knockout(model: &MIModel, tokenizer: &MITokenizer, prompt: &str) -> candl
 
     // Find "Paris" token for logit diff
     let paris_tokens = tokenizer.encode(" Paris")?;
-    if let Some(&paris_id) = paris_tokens.last() {
+    let paris_logit_diff = if let Some(&paris_id) = paris_tokens.last() {
         let diff = result.logit_diff(paris_id)?;
         println!("  Logit diff for \" Paris\" (token {paris_id}): {diff:+.4}");
-    }
+        Some(diff)
+    } else {
+        None
+    };
 
     // Top changed tokens
     let changed = result.top_changed_tokens(10)?;
@@ -359,12 +432,92 @@ fn run_knockout(model: &MIModel, tokenizer: &MITokenizer, prompt: &str) -> candl
     }
     println!();
 
+    // Write JSON if requested
+    if let Some(path) = json_path {
+        write_knockout_json(
+            path,
+            model_id,
+            prompt,
+            n_layers,
+            n_heads,
+            hidden,
+            target_layer,
+            seq_len,
+            kl,
+            paris_logit_diff,
+            &changed,
+            tokenizer,
+        )?;
+    }
+
     Ok(())
 }
 
 // ---------------------------------------------------------------------------
 // Helpers
 // ---------------------------------------------------------------------------
+
+/// Serialize knockout results and write to a JSON file.
+#[allow(clippy::too_many_arguments)]
+fn write_knockout_json(
+    path: &Path,
+    model_id: &str,
+    prompt: &str,
+    n_layers: usize,
+    n_heads: usize,
+    hidden: usize,
+    target_layer: usize,
+    seq_len: usize,
+    kl: f32,
+    paris_logit_diff: Option<f32>,
+    changed: &[(u32, f32, f32, f32)],
+    tokenizer: &MITokenizer,
+) -> candle_mi::Result<()> {
+    let top_changed: Vec<JsonChangedToken> = changed
+        .iter()
+        .enumerate()
+        .map(
+            |(rank, &(token_id, baseline_prob, ablated_prob, abs_diff))| {
+                let token = tokenizer
+                    .decode(&[token_id])
+                    .unwrap_or_else(|_| format!("[{token_id}]"));
+                JsonChangedToken {
+                    rank: rank + 1,
+                    token_id,
+                    token,
+                    baseline_prob,
+                    ablated_prob,
+                    abs_diff,
+                }
+            },
+        )
+        .collect();
+
+    let output = JsonOutput {
+        model_id: model_id.into(),
+        prompt: prompt.into(),
+        n_layers,
+        n_heads,
+        hidden_size: hidden,
+        target_layer,
+        knockout_edge: [seq_len - 1, 0],
+        kl_divergence: kl,
+        paris_logit_diff,
+        top_changed,
+    };
+    let json = serde_json::to_string_pretty(&output)
+        .map_err(|e| candle_mi::MIError::Config(format!("JSON serialization failed: {e}")))?;
+    if let Some(parent) = path.parent() {
+        std::fs::create_dir_all(parent).map_err(|e| {
+            candle_mi::MIError::Config(format!("failed to create {}: {e}", parent.display()))
+        })?;
+    }
+    std::fs::write(path, &json).map_err(|e| {
+        candle_mi::MIError::Config(format!("failed to write {}: {e}", path.display()))
+    })?;
+    println!("  JSON written to {}", path.display());
+    Ok(())
+}
 
 /// Rough estimate of F32 weight memory in MB.
 #[allow(clippy::cast_precision_loss, clippy::as_conversions)]
