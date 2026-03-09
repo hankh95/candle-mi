@@ -115,6 +115,10 @@ required-features = ["transformer"]
 name = "attention_patterns"
 required-features = ["transformer"]
 
+[[example]]
+name = "activation_patching"
+required-features = ["transformer"]
+
 [features]
 default = ["cuda", "transformer"]
 cuda = ["candle-core/cuda", "candle-nn/cuda"]
