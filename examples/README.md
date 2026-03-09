@@ -17,6 +17,8 @@ Runnable examples demonstrating candle-mi features.
 | `generate` | `transformer` | Greedy autoregressive text generation on all cached models |
 | `logit_lens` | `transformer` | Layer-by-layer prediction tracking via residual stream projection |
 | `attention_knockout` | `transformer` | Knock out a specific attention edge (last→first token), measure KL divergence and top changed tokens |
+| `steering_dose_response` | `transformer` | Sweep steering dose levels, build a dose-response curve, and interpolate target attention |
+| `attention_patterns` | `transformer` | Capture and analyze per-head attention patterns at every layer |
 | `figure13_planning_poems` | `clt`, `transformer` | Replication of [Anthropic's Figure 13](https://transformer-circuits.pub/2025/attribution-graphs/biology.html#dives-poem-location) (suppress + inject position sweep) |
 
 ## Running
@@ -54,6 +56,18 @@ cargo run --release --features transformer --example attention_knockout -- "meta
 
 # Attention knockout — all cached models
 cargo run --release --features transformer,mmap --example attention_knockout
+
+# Steering dose-response — single model
+cargo run --release --features transformer --example steering_dose_response -- "meta-llama/Llama-3.2-1B"
+
+# Steering dose-response — all cached models
+cargo run --release --features transformer,mmap --example steering_dose_response
+
+# Attention patterns — single model
+cargo run --release --features transformer --example attention_patterns -- "meta-llama/Llama-3.2-1B"
+
+# Attention patterns — all cached models
+cargo run --release --features transformer,mmap --example attention_patterns
 
 # Figure 13 replication — Llama 3.2 1B (default)
 cargo run --release --features clt,transformer --example figure13_planning_poems
@@ -103,6 +117,42 @@ knockout redistributes probability mass differently.
 **StarCoder2 3B** predicts "Par" (a code subword) rather than "Paris", so the
 logit diff applies to " Paris" (token 316) which has negligible baseline
 probability.
+
+### Example output: `steering_dose_response`
+
+Prompt: *"The capital of France is"* — steer the attention edge from the last
+token to position 0 at the middle layer, sweeping 6 dose levels.
+
+| Model | Layer | Baseline attn | Dose 0.5 KL | Dose 4.0 KL | Dose 6.0 KL |
+|-------|-------|--------------|-------------|-------------|-------------|
+| Llama 3.2 1B | 8 | 0.630 | 0.006 | 0.029 | 0.043 |
+| Gemma 2 2B | 13 | 0.589 | 0.001 | 0.002 | 0.003 |
+| StarCoder2 3B | 15 | 0.673 | 0.002 | 0.004 | 0.005 |
+
+**Llama 3.2 1B** shows the strongest dose-response: KL divergence grows from
+0.006 at half-dose to 0.043 at 6× dose, with "Paris" logit diff reaching
+−0.31. The model's factual recall is sensitive to attention steering at
+mid-depth.
+
+**Gemma 2 2B** shows much weaker sensitivity: KL stays below 0.004 even at 6×
+dose. With GQA (8 KV heads) and soft-capped logits, the prediction
+distribution is robust to single-edge steering.
+
+### Example output: `attention_patterns`
+
+Prompt: *"The capital of France is"* — capture attention at every layer and
+analyze what the last token attends to.
+
+| Model | Peak layer (last→first) | Peak attention | Top-1 at most layers |
+|-------|------------------------|----------------|---------------------|
+| Llama 3.2 1B | 2 | 0.847 | `<\|begin_of_text\|>` (BOS) |
+| Gemma 2 2B | 22 | 0.845 | `<bos>` (BOS) |
+| StarCoder2 3B | 26 | 0.866 | `The` (first real token, no BOS) |
+
+All three models show strong attention to the first token across most layers
+(the "BOS sink" pattern). **StarCoder2 3B** lacks a BOS token so the first
+real token ("The") serves as the attention sink. **Llama 3.2 1B** peaks early
+(layer 2), while **Gemma 2 2B** peaks late (layer 22).
 
 ### Example output: `auto_config_dogfood`
 

@@ -107,6 +107,14 @@ required-features = ["transformer"]
 name = "attention_knockout"
 required-features = ["transformer"]
 
+[[example]]
+name = "steering_dose_response"
+required-features = ["transformer"]
+
+[[example]]
+name = "attention_patterns"
+required-features = ["transformer"]
+
 [features]
 default = ["cuda", "transformer"]
 cuda = ["candle-core/cuda", "candle-nn/cuda"]
