@@ -9,6 +9,9 @@
 //! # Run on all cached models (no argument)
 //! cargo run --release --features transformer,mmap --example logit_lens
 //!
+//! # With JSON output
+//! cargo run --release --features transformer --example logit_lens -- "meta-llama/Llama-3.2-1B" --json results.json
+//!
 //! # With real memory reporting (RAM + VRAM)
 //! cargo run --release --features transformer,memory --example logit_lens -- "meta-llama/Llama-3.2-1B"
 //! ```
@@ -24,6 +27,7 @@
 //! 3. Builds a [`LogitLensAnalysis`](candle_mi::LogitLensAnalysis) and
 //!    prints both a summary and a detailed view, plus the first layer at
 //!    which the expected answer token appears.
+//! 4. Optionally writes structured JSON output via `--json <path>`.
 //!
 //! Pass a model ID to run a single model; omit to run all cached models.
 //! Each model is dropped before the next one loads, so GPU memory is
@@ -41,8 +45,59 @@ use candle_mi::{
 };
 #[cfg(feature = "memory")]
 use candle_mi::{MemoryReport, MemorySnapshot};
+use clap::Parser;
+use serde::Serialize;
 use std::path::{Path, PathBuf};
 use std::time::Instant;
+
+// ---------------------------------------------------------------------------
+// CLI
+// ---------------------------------------------------------------------------
+
+#[derive(Parser)]
+#[command(name = "logit_lens")]
+#[command(about = "Logit lens: track how the final prediction forms layer by layer")]
+struct Args {
+    /// `HuggingFace` model ID (omit to run all cached models)
+    model: Option<String>,
+
+    /// Write structured JSON output to this file
+    #[arg(long)]
+    json: Option<PathBuf>,
+}
+
+// ---------------------------------------------------------------------------
+// JSON output types
+// ---------------------------------------------------------------------------
+
+#[derive(Serialize)]
+struct JsonOutput {
+    model_id: String,
+    prompt: String,
+    n_layers: usize,
+    n_heads: usize,
+    hidden_size: usize,
+    paris_first_top10: Option<usize>,
+    layers: Vec<JsonLayer>,
+}
+
+#[derive(Serialize)]
+struct JsonLayer {
+    layer: usize,
+    predictions: Vec<JsonPrediction>,
+}
+
+#[derive(Serialize)]
+struct JsonPrediction {
+    rank: usize,
+    token_id: u32,
+    token: String,
+    probability: f32,
+}
+
+// ---------------------------------------------------------------------------
+// Main
+// ---------------------------------------------------------------------------
 
 fn main() {
     if let Err(e) = run() {
@@ -52,16 +107,17 @@ fn main() {
 }
 
 fn run() -> candle_mi::Result<()> {
+    let args = Args::parse();
     let prompt = "The capital of France is";
     let top_k: usize = 10;
-    let args: Vec<String> = std::env::args().collect();
 
     // If a model ID is provided, run only that model
-    if args.len() > 1 {
-        // INDEX: args[1] is safe — checked len() > 1 above
-        #[allow(clippy::indexing_slicing)]
-        let model_id = &args[1];
-        return run_single_model(model_id, prompt, top_k);
+    if let Some(ref model_id) = args.model {
+        return run_single_model(model_id, prompt, top_k, args.json.as_deref());
+    }
+
+    if args.json.is_some() {
+        eprintln!("Warning: --json is only supported with a specific model ID; ignoring.");
     }
 
     // Otherwise, discover and run all cached models
@@ -93,7 +149,12 @@ fn run() -> candle_mi::Result<()> {
 // ---------------------------------------------------------------------------
 
 /// Load a model by ID, run logit lens, and print results.
-fn run_single_model(model_id: &str, prompt: &str, top_k: usize) -> candle_mi::Result<()> {
+fn run_single_model(
+    model_id: &str,
+    prompt: &str,
+    top_k: usize,
+    json_path: Option<&Path>,
+) -> candle_mi::Result<()> {
     println!("=== {model_id} ===");
 
     #[cfg(feature = "memory")]
@@ -128,7 +189,9 @@ fn run_single_model(model_id: &str, prompt: &str, top_k: usize) -> candle_mi::Re
         "model has no embedded tokenizer".into(),
     ))?;
 
-    run_logit_lens(&model, tokenizer, prompt, n_layers, top_k)
+    run_logit_lens(
+        &model, tokenizer, prompt, n_layers, n_heads, hidden, top_k, model_id, json_path,
+    )
 }
 
 // ---------------------------------------------------------------------------
@@ -256,7 +319,9 @@ fn run_model(model_id: &str, snapshot: &Path, prompt: &str, top_k: usize) -> can
     }
     let tokenizer = MITokenizer::from_hf_path(tokenizer_path)?;
 
-    run_logit_lens(&model, &tokenizer, prompt, n_layers, top_k)
+    run_logit_lens(
+        &model, &tokenizer, prompt, n_layers, n_heads, hidden, top_k, model_id, None,
+    )
 }
 
 // ---------------------------------------------------------------------------
@@ -264,12 +329,17 @@ fn run_model(model_id: &str, snapshot: &Path, prompt: &str, top_k: usize) -> can
 // ---------------------------------------------------------------------------
 
 /// Run logit lens analysis on an already-loaded model.
+#[allow(clippy::too_many_arguments)]
 fn run_logit_lens(
     model: &MIModel,
     tokenizer: &MITokenizer,
     prompt: &str,
     n_layers: usize,
+    n_heads: usize,
+    hidden: usize,
     top_k: usize,
+    model_id: &str,
+    json_path: Option<&Path>,
 ) -> candle_mi::Result<()> {
     // Encode prompt
     let token_ids = tokenizer.encode(prompt)?;
@@ -291,21 +361,71 @@ fn run_logit_lens(
     // Build logit lens analysis
     let analysis = build_analysis(model, tokenizer, &cache, prompt, n_layers, top_k)?;
 
-    // Print results
+    // Print results (always)
     analysis.print_summary();
     println!();
     analysis.print_detailed(top_k);
     println!();
 
     // Show convergence: when does the expected token first appear?
-    if let Some(layer) = analysis.first_appearance("Paris", top_k) {
+    let paris_layer = analysis.first_appearance("Paris", top_k);
+    if let Some(layer) = paris_layer {
         println!("  \"Paris\" first appears in top-{top_k} at layer {layer}");
     } else {
         println!("  \"Paris\" never appears in top-{top_k}");
     }
     println!();
 
+    // Write JSON if requested
+    if let Some(path) = json_path {
+        let output = build_json_output(&analysis, model_id, n_heads, hidden, paris_layer);
+        let json = serde_json::to_string_pretty(&output)
+            .map_err(|e| candle_mi::MIError::Config(format!("JSON serialization failed: {e}")))?;
+        std::fs::write(path, &json).map_err(|e| {
+            candle_mi::MIError::Config(format!("failed to write {}: {e}", path.display()))
+        })?;
+        println!("  JSON written to {}", path.display());
+    }
+
     Ok(())
+}
+
+/// Build the JSON output from a completed `LogitLensAnalysis`.
+fn build_json_output(
+    analysis: &LogitLensAnalysis,
+    model_id: &str,
+    n_heads: usize,
+    hidden: usize,
+    paris_first_top10: Option<usize>,
+) -> JsonOutput {
+    let layers: Vec<JsonLayer> = analysis
+        .layer_results
+        .iter()
+        .map(|lr| JsonLayer {
+            layer: lr.layer,
+            predictions: lr
+                .predictions
+                .iter()
+                .enumerate()
+                .map(|(rank, pred)| JsonPrediction {
+                    rank: rank + 1,
+                    token_id: pred.token_id,
+                    token: pred.token.clone(),
+                    probability: pred.probability,
+                })
+                .collect(),
+        })
+        .collect();
+
+    JsonOutput {
+        model_id: model_id.into(),
+        prompt: analysis.input_text.clone(),
+        n_layers: analysis.n_layers,
+        n_heads,
+        hidden_size: hidden,
+        paris_first_top10,
+        layers,
+    }
 }
 
 /// Project each layer's residual stream to vocabulary and build a

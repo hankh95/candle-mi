@@ -52,6 +52,9 @@ cargo run --release --features transformer,mmap --example generate
 # Logit lens — single model
 cargo run --release --features transformer --example logit_lens -- "meta-llama/Llama-3.2-1B"
 
+# Logit lens — with JSON output
+cargo run --release --features transformer --example logit_lens -- "meta-llama/Llama-3.2-1B" --json examples/results/logit_lens/llama-3.2-1b.json
+
 # Logit lens — all cached models
 cargo run --release --features transformer,mmap --example logit_lens
 
