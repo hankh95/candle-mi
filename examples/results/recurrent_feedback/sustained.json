@@ -1,0 +1,179 @@
+{
+  "model_id": "meta-llama/Llama-3.2-1B",
+  "n_layers": 16,
+  "hidden_size": 2048,
+  "loop_start": 14,
+  "loop_end": 15,
+  "strength": 1.0,
+  "mode": "sustained",
+  "baseline_rhymes": 9,
+  "recurrent_rhymes": 9,
+  "total_couplets": 15,
+  "couplets": [
+    {
+      "id": 1,
+      "target": "light",
+      "line1": "The moon casts silver light,",
+      "baseline_word": "light",
+      "baseline_rhymes": true,
+      "recurrent_word": "light",
+      "recurrent_rhymes": true,
+      "recurrent_line": "The moon casts silver light,",
+      "result": "OK"
+    },
+    {
+      "id": 2,
+      "target": "play",
+      "line1": "The children laugh and play,",
+      "baseline_word": "talk",
+      "baseline_rhymes": false,
+      "recurrent_word": "talk",
+      "recurrent_rhymes": false,
+      "recurrent_line": "The adults smile and talk,",
+      "result": "-"
+    },
+    {
+      "id": 3,
+      "target": "sound",
+      "line1": "The thunder makes a sound,",
+      "baseline_word": "flashes",
+      "baseline_rhymes": false,
+      "recurrent_word": "flashes",
+      "recurrent_rhymes": false,
+      "recurrent_line": "The lightning flashes,",
+      "result": "-"
+    },
+    {
+      "id": 4,
+      "target": "rain",
+      "line1": "The clouds bring heavy rain,",
+      "baseline_word": "falls",
+      "baseline_rhymes": false,
+      "recurrent_word": "ground",
+      "recurrent_rhymes": false,
+      "recurrent_line": "The rain falls on the ground,",
+      "result": "-"
+    },
+    {
+      "id": 5,
+      "target": "time",
+      "line1": "The old clock measures time,",
+      "baseline_word": "time",
+      "baseline_rhymes": true,
+      "recurrent_word": "time",
+      "recurrent_rhymes": true,
+      "recurrent_line": "The old clock measures time,",
+      "result": "OK"
+    },
+    {
+      "id": 6,
+      "target": "air",
+      "line1": "The geese fly through the air,",
+      "baseline_word": "air",
+      "baseline_rhymes": true,
+      "recurrent_word": "air",
+      "recurrent_rhymes": true,
+      "recurrent_line": "The geese fly through the air,",
+      "result": "OK"
+    },
+    {
+      "id": 7,
+      "target": "gold",
+      "line1": "The sunset gleams like gold,",
+      "baseline_word": "fair",
+      "baseline_rhymes": false,
+      "recurrent_word": "fair",
+      "recurrent_rhymes": false,
+      "recurrent_line": "The moon is bright and fair,",
+      "result": "-"
+    },
+    {
+      "id": 8,
+      "target": "fire",
+      "line1": "The embers feed the fire,",
+      "baseline_word": "embers",
+      "baseline_rhymes": false,
+      "recurrent_word": "embers",
+      "recurrent_rhymes": false,
+      "recurrent_line": "The fire feeds the embers,",
+      "result": "-"
+    },
+    {
+      "id": 9,
+      "target": "stone",
+      "line1": "The castle walls of stone,",
+      "baseline_word": "stone",
+      "baseline_rhymes": true,
+      "recurrent_word": "stone",
+      "recurrent_rhymes": true,
+      "recurrent_line": "The castle walls of stone,",
+      "result": "OK"
+    },
+    {
+      "id": 10,
+      "target": "dream",
+      "line1": "I wandered through a dream,",
+      "baseline_word": "dream",
+      "baseline_rhymes": true,
+      "recurrent_word": "dream",
+      "recurrent_rhymes": true,
+      "recurrent_line": "I wandered through a dream,",
+      "result": "OK"
+    },
+    {
+      "id": 11,
+      "target": "strange",
+      "line1": "The silence felt so strange,",
+      "baseline_word": "alone",
+      "baseline_rhymes": false,
+      "recurrent_word": "alone",
+      "recurrent_rhymes": false,
+      "recurrent_line": "I was so alone.",
+      "result": "-"
+    },
+    {
+      "id": 12,
+      "target": "love",
+      "line1": "I never knew such love,",
+      "baseline_word": "love",
+      "baseline_rhymes": true,
+      "recurrent_word": "love",
+      "recurrent_rhymes": true,
+      "recurrent_line": "I never knew such love,",
+      "result": "OK"
+    },
+    {
+      "id": 13,
+      "target": "truth",
+      "line1": "She spoke the honest truth,",
+      "baseline_word": "truth",
+      "baseline_rhymes": true,
+      "recurrent_word": "truth",
+      "recurrent_rhymes": true,
+      "recurrent_line": "She spoke the honest truth,",
+      "result": "OK"
+    },
+    {
+      "id": 14,
+      "target": "world",
+      "line1": "He traveled all the world,",
+      "baseline_word": "world",
+      "baseline_rhymes": true,
+      "recurrent_word": "world",
+      "recurrent_rhymes": true,
+      "recurrent_line": "He traveled all the world,",
+      "result": "OK"
+    },
+    {
+      "id": 15,
+      "target": "earth",
+      "line1": "The seeds lay in the earth,",
+      "baseline_word": "earth",
+      "baseline_rhymes": true,
+      "recurrent_word": "earth",
+      "recurrent_rhymes": true,
+      "recurrent_line": "The seeds lay in the earth,",
+      "result": "OK"
+    }
+  ]
+}

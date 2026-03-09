@@ -10,17 +10,24 @@
 NotebookFileLineBreakTest
 NotebookFileLineBreakTest
 NotebookDataPosition[       154,          7]
-NotebookDataLength[    235886,       6052]
-NotebookOptionsPosition[    232288,       5980]
-NotebookOutlinePosition[    232686,       5996]
-CellTagsIndexPosition[    232643,       5993]
+NotebookDataLength[    334461,       8651]
+NotebookOptionsPosition[    326675,       8510]
+NotebookOutlinePosition[    327073,       8526]
+CellTagsIndexPosition[    327030,       8523]
 WindowFrame->Normal*)
 
 (* Beginning of Notebook Content *)
 Notebook[{
 
 Cell[CellGroupData[{
-Cell["Shared Helpers", "Section",
+Cell["Replicating the Figure 13", "Section",
+ CellChangeTimes->{{3.982064472198803*^9, 
+  3.9820644783655224`*^9}},ExpressionUUID->"f7c3ed45-4f57-e34a-839f-\
+85f651ced5cb"],
+
+Cell[CellGroupData[{
+
+Cell["Shared Helpers", "Subsection",
  CellChangeTimes->{
   3.9819582223477974`*^9, 3.9819714645845814`*^9, {3.9819717693033123`*^9, 
    3.981971776558567*^9}},ExpressionUUID->"a3e10ddd-dba1-414d-9c4c-\
@@ -148,7 +155,7 @@ Cell[BoxData[
 
 Cell[CellGroupData[{
 
-Cell["Llama 3.2 1B with 524K CLTs", "Section",
+Cell["Llama 3.2 1B with 524K CLTs", "Subsection",
  CellChangeTimes->{3.9819582223477974`*^9, 
   3.9819714645845814`*^9},ExpressionUUID->"05689a35-7a01-2c44-b603-\
 f843b994dc3b"],
@@ -3050,7 +3057,7 @@ JACOPIN\\\\Documents\\\\Code\\\\Source\\\\candle-mi\\\\examples\\\\figure13\\\
 
 Cell[CellGroupData[{
 
-Cell["Gemma 2 2B with 426K CLTs", "Section",
+Cell["Gemma 2 2B with 426K CLTs", "Subsection",
  CellChangeTimes->{
   3.9819582223477974`*^9, {3.981971448634098*^9, 
    3.9819714610489826`*^9}},ExpressionUUID->"13cc4a95-4326-fc41-a2fa-\
@@ -5977,6 +5984,2529 @@ JACOPIN\\\\Documents\\\\Code\\\\Source\\\\candle-mi\\\\examples\\\\figure13\\\
 }, Open  ]]
 }, Open  ]]
 }, Open  ]]
+}, Open  ]],
+
+Cell[CellGroupData[{
+
+Cell["Adding recurrent feedback", "Section",
+ CellChangeTimes->{{3.982064487445301*^9, 
+  3.982064511404396*^9}},ExpressionUUID->"b2f998e0-9edc-794a-90bb-\
+4859f0fa40e1"],
+
+Cell[CellGroupData[{
+
+Cell["Loading the JSON files", "Subsubsection",
+ CellChangeTimes->{{3.9820645883697777`*^9, 
+  3.982064591584858*^9}},ExpressionUUID->"04e3c4cb-1ecc-5644-9f32-\
+8e900dea4234"],
+
+Cell[BoxData[
+ RowBox[{
+  RowBox[{"(*", " ", 
+   RowBox[{
+   "===", "===", "===", "===", "===", "===", "===", "===", "===", "===", "===",
+     "===", "===", "===", "===", "===", "===", "===", "===", "===", "===", 
+    "==="}], " ", "*)"}], "\n", 
+  RowBox[{"(*", " ", 
+   RowBox[{
+    RowBox[{
+     RowBox[{
+      RowBox[{"Recurrent", " ", "Feedback", " ", 
+       RowBox[{"(", "Anacrousis", ")"}]}], ":", " ", 
+      RowBox[{"Condition", " ", "Comparison"}]}], " ", "&"}], " ", 
+    "Couplet"}], "          ", "*)"}], "\n", 
+  RowBox[{"(*", " ", 
+   RowBox[{"Grid", " ", "from", " ", "JSON", " ", 
+    RowBox[{"output", "."}]}], 
+   "                                                   ", "*)"}], "\n", 
+  RowBox[{"(*", " ", 
+   RowBox[{"candle", "-", 
+    RowBox[{"mi", " ", 
+     RowBox[{"example", ":", " ", "recurrent_feedback"}]}]}], 
+   "                                    ", "*)"}], "\n", 
+  RowBox[{
+  "(*", "                                                                     \
+     ", "*)"}], "\n", 
+  RowBox[{"(*", " ", 
+   RowBox[{"Usage", ":"}], 
+   "                                                                   ", 
+   "*)"}], "\n", 
+  RowBox[{"(*", "   ", 
+   RowBox[{"1.", " ", "Run", " ", "the", " ", "example", " ", 
+    RowBox[{"with", " ", "--"}], "output", " ", "to", " ", "produce", " ", 
+    "JSON", " ", 
+    RowBox[{"files", ":"}]}], "                ", "*)"}], "\n", 
+  RowBox[{"(*", "      ", 
+   RowBox[{"cargo", " ", 
+    RowBox[{"run", " ", "--"}], 
+    RowBox[{"release", " ", "--"}], "features", " ", "transformer"}], 
+   "                          ", "*)"}], "\n", 
+  RowBox[{"(*", "        ", 
+   RowBox[{
+    RowBox[{"--", "example"}], " ", 
+    RowBox[{"recurrent_feedback", " ", "--"}]}], 
+   "                                   ", "*)"}], "\n", 
+  RowBox[{"(*", "        ", 
+   RowBox[{
+    RowBox[{"--", "output"}], " ", 
+    RowBox[{
+     RowBox[{
+      RowBox[{"examples", "/", "results"}], "/", "recurrent_feedback"}], "/", 
+     RowBox[{"prefill", ".", "json"}]}]}], "         ", "*)"}], "\n", 
+  RowBox[{"(*", "      ", 
+   RowBox[{"cargo", " ", 
+    RowBox[{"run", " ", "--"}], 
+    RowBox[{"release", " ", "--"}], "features", " ", "transformer"}], 
+   "                          ", "*)"}], "\n", 
+  RowBox[{"(*", "        ", 
+   RowBox[{
+    RowBox[{"--", "example"}], " ", 
+    RowBox[{
+     RowBox[{"recurrent_feedback", " ", "--"}], " ", "--"}], "sustained"}], 
+   "                       ", "*)"}], "\n", 
+  RowBox[{"(*", "        ", 
+   RowBox[{
+    RowBox[{"--", "loop"}], "-", 
+    RowBox[{"start", " ", 
+     RowBox[{"14", " ", "--"}], "loop"}], "-", 
+    RowBox[{"end", " ", 
+     RowBox[{"15", " ", "--"}], "strength", " ", "1.0"}]}], 
+   "                      ", "*)"}], "\n", 
+  RowBox[{"(*", "        ", 
+   RowBox[{
+    RowBox[{"--", "output"}], " ", 
+    RowBox[{
+     RowBox[{
+      RowBox[{"examples", "/", "results"}], "/", "recurrent_feedback"}], "/", 
+     RowBox[{"sustained", ".", "json"}]}]}], "       ", "*)"}], "\n", 
+  RowBox[{"(*", "   ", 
+   RowBox[{"2.", " ", "Open", " ", 
+    RowBox[{"this", " ", ".", "wl"}], " ", "in", " ", "Mathematica", " ", 
+    "and", " ", 
+    RowBox[{"evaluate", "."}]}], "                          ", "*)"}], "\n", 
+  RowBox[{
+  "(*", "                                                                     \
+     ", "*)"}], "\n", 
+  RowBox[{"(*", " ", 
+   RowBox[{"References", ":"}], 
+   "                                                              ", "*)"}], 
+  "\n", 
+  RowBox[{"(*", "   ", 
+   RowBox[{
+    RowBox[{"Taufeeque", " ", "et", " ", 
+     RowBox[{"al", "."}]}], ",", " ", 
+    RowBox[{"arXiv", ":", 
+     RowBox[{"2407.15421", " ", 
+      RowBox[{"(", 
+       RowBox[{"DRC", " ", "planning", " ", "in", " ", "Sokoban"}], 
+       ")"}]}]}]}], "           ", "*)"}], "\n", 
+  RowBox[{"(*", "   ", 
+   RowBox[{
+    RowBox[{"Lindsey", " ", "et", " ", 
+     RowBox[{"al", "."}]}], ",", 
+    " ", "\"\<On the Biology of a Large Language Model\>\"", ",", " ", 
+    "2025"}], "       ", "*)"}], "\n", 
+  RowBox[{"(*", "   ", 
+   RowBox[{"plip", "-", 
+    RowBox[{"rs", " ", "anacrousis", " ", "branch", " ", 
+     RowBox[{"(", 
+      RowBox[{"28", "-", 
+       RowBox[{"condition", " ", "experiment"}]}], ")"}]}]}], 
+   "                    ", "*)"}], "\n", 
+  RowBox[{"(*", " ", 
+   RowBox[{
+   "===", "===", "===", "===", "===", "===", "===", "===", "===", "===", "===",
+     "===", "===", "===", "===", "===", "===", "===", "===", "===", "===", 
+    "==="}], " ", "*)"}], "\n", "\n", 
+  RowBox[{"(*", " ", 
+   RowBox[{
+   "===", "===", "===", "===", "===", "===", "===", "===", "===", "===", "===",
+     "===", "===", "===", "===", "===", "===", "===", "===", "==="}], " ", 
+   "*)"}], "\n", 
+  RowBox[{"(*", " ", 
+   RowBox[{"LOAD", " ", "JSON", " ", "DATA"}], 
+   "                                                    ", "*)"}], "\n", 
+  RowBox[{"(*", " ", 
+   RowBox[{
+   "===", "===", "===", "===", "===", "===", "===", "===", "===", "===", "===",
+     "===", "===", "===", "===", "===", "===", "===", "===", "==="}], " ", 
+   "*)"}], "\n", "\n", 
+  RowBox[{
+   RowBox[{
+    RowBox[{"resultsDir", " ", "=", " ", 
+     RowBox[{"FileNameJoin", "[", 
+      RowBox[{"{", "\n", "  ", 
+       RowBox[{
+        RowBox[{"NotebookDirectory", "[", "]"}], ",", " ", "\"\<..\>\"", ",", 
+        " ", "\"\<results\>\"", ",", " ", "\"\<recurrent_feedback\>\""}], 
+       "\n", "}"}], "]"}]}], ";"}], "\n", "\n", 
+   RowBox[{
+    RowBox[{"prefillFile", " ", "=", " ", 
+     RowBox[{"FileNameJoin", "[", 
+      RowBox[{"{", 
+       RowBox[{"resultsDir", ",", " ", "\"\<prefill.json\>\""}], "}"}], 
+      "]"}]}], ";"}], "\n", 
+   RowBox[{
+    RowBox[{"sustainedFile", " ", "=", " ", 
+     RowBox[{"FileNameJoin", "[", 
+      RowBox[{"{", 
+       RowBox[{"resultsDir", ",", " ", "\"\<sustained.json\>\""}], "}"}], 
+      "]"}]}], ";"}], "\n", "\n", 
+   RowBox[{
+    RowBox[{"hasPrefill", " ", "=", " ", 
+     RowBox[{"FileExistsQ", "[", "prefillFile", "]"}]}], ";"}], "\n", 
+   RowBox[{
+    RowBox[{"hasSustained", " ", "=", " ", 
+     RowBox[{"FileExistsQ", "[", "sustainedFile", "]"}]}], ";"}], "\n", "\n", 
+   RowBox[{
+    RowBox[{"If", "[", 
+     RowBox[{"hasPrefill", ",", "\n", "  ", 
+      RowBox[{"prefillData", " ", "=", " ", 
+       RowBox[{"Import", "[", 
+        RowBox[{"prefillFile", ",", " ", "\"\<RawJSON\>\""}], "]"}]}], ",", 
+      "\n", "  ", 
+      RowBox[{"Print", "[", 
+       RowBox[{"\"\<WARNING: \>\"", " ", "<>", " ", "prefillFile", " ", "<>", 
+        " ", "\"\< not found \[LongDash] run the example with --output\>\""}],
+        "]"}]}], "\n", "]"}], ";"}], "\n", 
+   RowBox[{
+    RowBox[{"If", "[", 
+     RowBox[{"hasSustained", ",", "\n", "  ", 
+      RowBox[{"sustainedData", " ", "=", " ", 
+       RowBox[{"Import", "[", 
+        RowBox[{"sustainedFile", ",", " ", "\"\<RawJSON\>\""}], "]"}]}], ",", 
+      "\n", "  ", 
+      RowBox[{"Print", "[", 
+       RowBox[{"\"\<WARNING: \>\"", " ", "<>", " ", "sustainedFile", " ", "<>",
+         " ", "\"\< not found \[LongDash] run the example with \
+--output\>\""}], "]"}]}], "\n", "]"}], ";"}]}]}]], "Input",
+ CellChangeTimes->{{3.9820646111054993`*^9, 
+  3.9820647403084965`*^9}},ExpressionUUID->"d8d34488-0f0b-644d-b4ed-\
+303b3e75edd9"]
+}, Open  ]],
+
+Cell[CellGroupData[{
+
+Cell["\<\
+Shared Helpers: extract per-couplet data from a JSON association\
+\>", "Subsubsection",
+ CellChangeTimes->{
+  3.9819582223477974`*^9, 3.9819714645845814`*^9, {3.9819717693033123`*^9, 
+   3.981971776558567*^9}, {3.9820657994513683`*^9, 
+   3.9820657999657364`*^9}},ExpressionUUID->"705be0f6-cedc-764d-a6fc-\
+e6180381197e"],
+
+Cell[BoxData[
+ RowBox[{
+  RowBox[{"(*", " ", 
+   RowBox[{"Extract", " ", 
+    RowBox[{"{", 
+     RowBox[{
+     "id", ",", " ", "target", ",", " ", "baseline_word", ",", " ", 
+      "baseline_ok", ",", " ", "recurrent_word", ",", " ", "recurrent_ok", ",",
+       " ", "result"}], "}"}], "\n", "   ", "from", " ", "the", 
+    " ", "\"\<couplets\>\"", " ", "array", " ", "in", " ", "a", " ", "JSON", " ", 
+    RowBox[{"association", "."}]}], " ", "*)"}], "\n", 
+  RowBox[{
+   RowBox[{
+    RowBox[{
+     RowBox[{"extractCouplets", "[", "d_", "]"}], " ", ":=", " ", 
+     RowBox[{"d", "[", "\"\<couplets\>\"", "]"}]}], ";"}], "\n", "\n", 
+   RowBox[{"(*", " ", 
+    RowBox[{
+     RowBox[{
+      RowBox[{
+      "Build", " ", "the", " ", "grid", " ", "and", " ", "word", " ", 
+       "arrays", " ", "from", " ", "one", " ", "or", " ", "two", " ", "JSON", 
+       " ", 
+       RowBox[{"runs", ".", "\n", "   ", "Each"}], " ", "JSON", " ", "has", " ",
+        "baseline"}], " ", "+", " ", 
+      RowBox[{"one", " ", "recurrent", " ", 
+       RowBox[{"condition", ".", "\n", "   ", "We"}], " ", "merge", " ", 
+       "them", " ", "into", " ", "a", " ", "unified", " ", 
+       RowBox[{"grid", ":", "\n", "     ", 
+        RowBox[{"col", " ", "1"}]}]}]}], " ", "=", " ", 
+     RowBox[{
+      RowBox[{"baseline", " ", 
+       RowBox[{"(", 
+        RowBox[{
+         RowBox[{"from", " ", "prefill", " ", "JSON"}], " ", "\[LongDash]", 
+         " ", 
+         RowBox[{
+         "both", " ", "share", " ", "the", " ", "same", " ", "baseline"}]}], 
+        ")"}], "\n", "     ", "col", " ", "2"}], " ", "=", " ", 
+      RowBox[{
+       RowBox[{"prefill", " ", "recurrent", "\n", "     ", "col", " ", "3"}], 
+       " ", "=", " ", 
+       RowBox[{"sustained", " ", "recurrent"}]}]}]}], " ", "*)"}], 
+   "\n"}]}]], "Input",
+ CellChangeTimes->{{3.982065797731489*^9, 
+  3.982065803954874*^9}},ExpressionUUID->"68f55570-c6be-ad44-b82d-\
+49caf64d7ea2"]
+}, Open  ]],
+
+Cell[CellGroupData[{
+
+Cell["Build Data Tables", "Subsubsection",
+ CellChangeTimes->{{3.9820658108816032`*^9, 
+  3.982065814330353*^9}},ExpressionUUID->"be69319e-5904-0144-a519-\
+8f07339f16b4"],
+
+Cell[CellGroupData[{
+
+Cell[BoxData[
+ RowBox[{"If", "[", 
+  RowBox[{
+   RowBox[{"hasPrefill", " ", "&&", " ", "hasSustained"}], ",", "\n", "  ", 
+   RowBox[{"(*", " ", 
+    RowBox[{
+     RowBox[{"--", 
+      RowBox[{"-", " ", "Both"}]}], " ", "files", " ", 
+     RowBox[{"available", ":", " ", 
+      RowBox[{"3", "-", 
+       RowBox[{"column", " ", 
+        RowBox[{"grid", " ", "--"}]}], "-"}]}]}], " ", "*)"}], "\n", "  ", 
+   RowBox[{
+    RowBox[{"pfCouplets", " ", "=", " ", 
+     RowBox[{"prefillData", "[", "\"\<couplets\>\"", "]"}]}], ";", "\n", "  ", 
+    RowBox[{"susCouplets", " ", "=", " ", 
+     RowBox[{"sustainedData", "[", "\"\<couplets\>\"", "]"}]}], ";", "\n", 
+    "  ", 
+    RowBox[{"nCouplets", " ", "=", " ", 
+     RowBox[{"Length", "[", "pfCouplets", "]"}]}], ";", "\n", "\n", "  ", 
+    RowBox[{"modelId", " ", "=", " ", 
+     RowBox[{"prefillData", "[", "\"\<model_id\>\"", "]"}]}], ";", "\n", "  ", 
+    RowBox[{"nLayers", " ", "=", " ", 
+     RowBox[{"prefillData", "[", "\"\<n_layers\>\"", "]"}]}], ";", "\n", "\n",
+     "  ", 
+    RowBox[{"coupletGrid", " ", "=", " ", 
+     RowBox[{"Table", "[", "\n", "    ", 
+      RowBox[{
+       RowBox[{"{", "\n", "      ", 
+        RowBox[{
+         RowBox[{"pfCouplets", "[", 
+          RowBox[{"[", 
+           RowBox[{"i", ",", " ", "\"\<id\>\""}], "]"}], "]"}], ",", "\n", 
+         "      ", 
+         RowBox[{"pfCouplets", "[", 
+          RowBox[{"[", 
+           RowBox[{"i", ",", " ", "\"\<target\>\""}], "]"}], "]"}], ",", "\n",
+          "      ", 
+         RowBox[{"If", "[", 
+          RowBox[{
+           RowBox[{"pfCouplets", "[", 
+            RowBox[{"[", 
+             RowBox[{"i", ",", " ", "\"\<baseline_rhymes\>\""}], "]"}], "]"}],
+            ",", " ", "1", ",", " ", "0"}], "]"}], ",", "\n", "      ", 
+         RowBox[{"If", "[", 
+          RowBox[{
+           RowBox[{"pfCouplets", "[", 
+            RowBox[{"[", 
+             RowBox[{"i", ",", " ", "\"\<recurrent_rhymes\>\""}], "]"}], 
+            "]"}], ",", " ", "1", ",", " ", "0"}], "]"}], ",", "\n", "      ", 
+         RowBox[{"If", "[", 
+          RowBox[{
+           RowBox[{"susCouplets", "[", 
+            RowBox[{"[", 
+             RowBox[{"i", ",", " ", "\"\<recurrent_rhymes\>\""}], "]"}], 
+            "]"}], ",", " ", "1", ",", " ", "0"}], "]"}]}], "\n", "    ", 
+        "}"}], ",", "\n", "    ", 
+       RowBox[{"{", 
+        RowBox[{"i", ",", " ", "nCouplets"}], "}"}]}], "\n", "  ", "]"}]}], ";",
+     "\n", "\n", "  ", 
+    RowBox[{"generatedWords", " ", "=", " ", 
+     RowBox[{"Table", "[", "\n", "    ", 
+      RowBox[{
+       RowBox[{"{", "\n", "      ", 
+        RowBox[{
+         RowBox[{"pfCouplets", "[", 
+          RowBox[{"[", 
+           RowBox[{"i", ",", " ", "\"\<id\>\""}], "]"}], "]"}], ",", "\n", 
+         "      ", 
+         RowBox[{"pfCouplets", "[", 
+          RowBox[{"[", 
+           RowBox[{"i", ",", " ", "\"\<baseline_word\>\""}], "]"}], "]"}], ",",
+          "\n", "      ", 
+         RowBox[{"pfCouplets", "[", 
+          RowBox[{"[", 
+           RowBox[{"i", ",", " ", "\"\<recurrent_word\>\""}], "]"}], "]"}], ",",
+          "\n", "      ", 
+         RowBox[{"susCouplets", "[", 
+          RowBox[{"[", 
+           RowBox[{"i", ",", " ", "\"\<recurrent_word\>\""}], "]"}], "]"}]}], 
+        "\n", "    ", "}"}], ",", "\n", "    ", 
+       RowBox[{"{", 
+        RowBox[{"i", ",", " ", "nCouplets"}], "}"}]}], "\n", "  ", "]"}]}], ";",
+     "\n", "\n", "  ", 
+    RowBox[{"conditionLabels", " ", "=", " ", 
+     RowBox[{"{", "\n", "    ", 
+      RowBox[{"\"\<Baseline\>\"", ",", "\n", "    ", 
+       RowBox[{"\"\<Prefill\\nL\>\"", " ", "<>", " ", 
+        RowBox[{"ToString", "[", 
+         RowBox[{"prefillData", "[", "\"\<loop_start\>\"", "]"}], "]"}], " ", 
+        "<>", "\n", "      ", "\"\<\[Dash]\>\"", " ", "<>", " ", 
+        RowBox[{"ToString", "[", 
+         RowBox[{"prefillData", "[", "\"\<loop_end\>\"", "]"}], "]"}], " ", "<>",
+         "\n", "      ", "\"\<, s=\>\"", " ", "<>", " ", 
+        RowBox[{"ToString", "[", 
+         RowBox[{"prefillData", "[", "\"\<strength\>\"", "]"}], "]"}]}], ",", 
+       "\n", "    ", 
+       RowBox[{"\"\<Sustained\\nL\>\"", " ", "<>", " ", 
+        RowBox[{"ToString", "[", 
+         RowBox[{"sustainedData", "[", "\"\<loop_start\>\"", "]"}], "]"}], 
+        " ", "<>", "\n", "      ", "\"\<\[Dash]\>\"", " ", "<>", " ", 
+        RowBox[{"ToString", "[", 
+         RowBox[{"sustainedData", "[", "\"\<loop_end\>\"", "]"}], "]"}], " ", 
+        "<>", "\n", "      ", "\"\<, s=\>\"", " ", "<>", " ", 
+        RowBox[{"ToString", "[", 
+         RowBox[{"sustainedData", "[", "\"\<strength\>\"", "]"}], "]"}]}]}], 
+      "\n", "  ", "}"}]}], ";", "\n", "\n", "  ", 
+    RowBox[{"conditionRhymes", " ", "=", " ", 
+     RowBox[{"{", "\n", "    ", 
+      RowBox[{
+       RowBox[{"prefillData", "[", "\"\<baseline_rhymes\>\"", "]"}], ",", 
+       "\n", "    ", 
+       RowBox[{"prefillData", "[", "\"\<recurrent_rhymes\>\"", "]"}], ",", 
+       "\n", "    ", 
+       RowBox[{"sustainedData", "[", "\"\<recurrent_rhymes\>\"", "]"}]}], 
+      "\n", "  ", "}"}]}], ";", "\n", "\n", "  ", 
+    RowBox[{"nCols", " ", "=", " ", "3"}], ";", "\n", "  ", 
+    RowBox[{"baselineRhymes", " ", "=", " ", 
+     RowBox[{"prefillData", "[", "\"\<baseline_rhymes\>\"", "]"}]}]}], ",", 
+   "\n", "\n", "  ", 
+   RowBox[{"(*", " ", 
+    RowBox[{
+     RowBox[{"--", 
+      RowBox[{"-", " ", "Only"}]}], " ", "prefill", " ", 
+     RowBox[{"available", ":", " ", 
+      RowBox[{"2", "-", 
+       RowBox[{"column", " ", 
+        RowBox[{"grid", " ", "--"}]}], "-"}]}]}], " ", "*)"}], "\n", "  ", 
+   RowBox[{"If", "[", 
+    RowBox[{
+     RowBox[{"hasPrefill", " ", "&&", " ", 
+      RowBox[{"!", "hasSustained"}]}], ",", "\n", "    ", 
+     RowBox[{
+      RowBox[{"pfCouplets", " ", "=", " ", 
+       RowBox[{"prefillData", "[", "\"\<couplets\>\"", "]"}]}], ";", "\n", 
+      "    ", 
+      RowBox[{"nCouplets", " ", "=", " ", 
+       RowBox[{"Length", "[", "pfCouplets", "]"}]}], ";", "\n", "    ", 
+      RowBox[{"modelId", " ", "=", " ", 
+       RowBox[{"prefillData", "[", "\"\<model_id\>\"", "]"}]}], ";", "\n", 
+      "    ", 
+      RowBox[{"nLayers", " ", "=", " ", 
+       RowBox[{"prefillData", "[", "\"\<n_layers\>\"", "]"}]}], ";", "\n", 
+      "\n", "    ", 
+      RowBox[{"coupletGrid", " ", "=", " ", 
+       RowBox[{"Table", "[", "\n", "      ", 
+        RowBox[{
+         RowBox[{"{", "\n", "        ", 
+          RowBox[{
+           RowBox[{"pfCouplets", "[", 
+            RowBox[{"[", 
+             RowBox[{"i", ",", " ", "\"\<id\>\""}], "]"}], "]"}], ",", "\n", 
+           "        ", 
+           RowBox[{"pfCouplets", "[", 
+            RowBox[{"[", 
+             RowBox[{"i", ",", " ", "\"\<target\>\""}], "]"}], "]"}], ",", 
+           "\n", "        ", 
+           RowBox[{"If", "[", 
+            RowBox[{
+             RowBox[{"pfCouplets", "[", 
+              RowBox[{"[", 
+               RowBox[{"i", ",", " ", "\"\<baseline_rhymes\>\""}], "]"}], 
+              "]"}], ",", " ", "1", ",", " ", "0"}], "]"}], ",", "\n", 
+           "        ", 
+           RowBox[{"If", "[", 
+            RowBox[{
+             RowBox[{"pfCouplets", "[", 
+              RowBox[{"[", 
+               RowBox[{"i", ",", " ", "\"\<recurrent_rhymes\>\""}], "]"}], 
+              "]"}], ",", " ", "1", ",", " ", "0"}], "]"}]}], "\n", "      ", 
+          "}"}], ",", "\n", "      ", 
+         RowBox[{"{", 
+          RowBox[{"i", ",", " ", "nCouplets"}], "}"}]}], "\n", "    ", 
+        "]"}]}], ";", "\n", "\n", "    ", 
+      RowBox[{"generatedWords", " ", "=", " ", 
+       RowBox[{"Table", "[", "\n", "      ", 
+        RowBox[{
+         RowBox[{"{", "\n", "        ", 
+          RowBox[{
+           RowBox[{"pfCouplets", "[", 
+            RowBox[{"[", 
+             RowBox[{"i", ",", " ", "\"\<id\>\""}], "]"}], "]"}], ",", "\n", 
+           "        ", 
+           RowBox[{"pfCouplets", "[", 
+            RowBox[{"[", 
+             RowBox[{"i", ",", " ", "\"\<baseline_word\>\""}], "]"}], "]"}], ",",
+            "\n", "        ", 
+           RowBox[{"pfCouplets", "[", 
+            RowBox[{"[", 
+             RowBox[{"i", ",", " ", "\"\<recurrent_word\>\""}], "]"}], 
+            "]"}]}], "\n", "      ", "}"}], ",", "\n", "      ", 
+         RowBox[{"{", 
+          RowBox[{"i", ",", " ", "nCouplets"}], "}"}]}], "\n", "    ", 
+        "]"}]}], ";", "\n", "\n", "    ", 
+      RowBox[{"conditionLabels", " ", "=", " ", 
+       RowBox[{"{", "\n", "      ", 
+        RowBox[{"\"\<Baseline\>\"", ",", "\n", "      ", 
+         RowBox[{
+          RowBox[{"prefillData", "[", "\"\<mode\>\"", "]"}], " ", "<>", 
+          " ", "\"\<\\nL\>\"", " ", "<>", "\n", "        ", 
+          RowBox[{"ToString", "[", 
+           RowBox[{"prefillData", "[", "\"\<loop_start\>\"", "]"}], "]"}], 
+          " ", "<>", "\n", "        ", "\"\<\[Dash]\>\"", " ", "<>", " ", 
+          RowBox[{"ToString", "[", 
+           RowBox[{"prefillData", "[", "\"\<loop_end\>\"", "]"}], "]"}], " ", 
+          "<>", "\n", "        ", "\"\<, s=\>\"", " ", "<>", " ", 
+          RowBox[{"ToString", "[", 
+           RowBox[{"prefillData", "[", "\"\<strength\>\"", "]"}], "]"}]}]}], 
+        "\n", "    ", "}"}]}], ";", "\n", "\n", "    ", 
+      RowBox[{"conditionRhymes", " ", "=", " ", 
+       RowBox[{"{", "\n", "      ", 
+        RowBox[{
+         RowBox[{"prefillData", "[", "\"\<baseline_rhymes\>\"", "]"}], ",", 
+         "\n", "      ", 
+         RowBox[{"prefillData", "[", "\"\<recurrent_rhymes\>\"", "]"}]}], 
+        "\n", "    ", "}"}]}], ";", "\n", "\n", "    ", 
+      RowBox[{"nCols", " ", "=", " ", "2"}], ";", "\n", "    ", 
+      RowBox[{"baselineRhymes", " ", "=", " ", 
+       RowBox[{"prefillData", "[", "\"\<baseline_rhymes\>\"", "]"}]}]}], ",", 
+     "\n", "\n", "    ", 
+     RowBox[{"(*", " ", 
+      RowBox[{
+       RowBox[{"--", 
+        RowBox[{"-", " ", "Neither"}]}], " ", 
+       RowBox[{"file", ":", " ", 
+        RowBox[{
+         RowBox[{"abort", " ", "--"}], "-"}]}]}], " ", "*)"}], "\n", "    ", 
+     RowBox[{
+      RowBox[{
+      "Print", "[", "\"\<ERROR: No JSON files found. Run the example with \
+--output first.\>\"", "]"}], ";", "\n", "    ", 
+      RowBox[{"Abort", "[", "]"}]}]}], "\n", "  ", "]"}]}], "\n", 
+  "]"}]], "Input",
+ CellChangeTimes->{
+  3.982064791515112*^9, {3.9820658177014503`*^9, 
+   3.982065818677107*^9}},ExpressionUUID->"9a259fd5-68fe-4f4b-a182-\
+bf460c1f66b9"],
+
+Cell[BoxData["9"], "Output",
+ CellChangeTimes->{3.982064792911312*^9},
+ CellLabel->"Out[9]=",ExpressionUUID->"6c070ec2-8247-5c4a-aa30-dbfa8cb023ec"]
+}, Open  ]]
+}, Open  ]],
+
+Cell[CellGroupData[{
+
+Cell["FIGURE 1: Condition Comparison Bar Chart  ", "Subsubsection",
+ CellChangeTimes->{
+  3.9820658412348404`*^9},ExpressionUUID->"e94206cb-17e5-a64d-b463-\
+171fc7245a6b"],
+
+Cell[CellGroupData[{
+
+Cell[BoxData[
+ RowBox[{"fig1", " ", "=", " ", 
+  RowBox[{"Show", "[", "\n", "  ", 
+   RowBox[{
+    RowBox[{"BarChart", "[", 
+     RowBox[{"conditionRhymes", ",", "\n", "    ", 
+      RowBox[{"ChartLabels", " ", "->", " ", 
+       RowBox[{"Placed", "[", "\n", "      ", 
+        RowBox[{
+         RowBox[{
+          RowBox[{
+           RowBox[{"Style", "[", 
+            RowBox[{"#", ",", " ", "11"}], "]"}], " ", "&"}], " ", "/@", " ", 
+          "conditionLabels"}], ",", "\n", "      ", "Below"}], "\n", "    ", 
+        "]"}]}], ",", "\n", "    ", 
+      RowBox[{"ChartStyle", " ", "->", " ", 
+       RowBox[{"Take", "[", "\n", "      ", 
+        RowBox[{
+         RowBox[{"{", 
+          RowBox[{
+           RowBox[{"GrayLevel", "[", "0.5", "]"}], ",", " ", 
+           RowBox[{"RGBColor", "[", 
+            RowBox[{"0.2", ",", " ", "0.4", ",", " ", "0.8"}], "]"}], ",", 
+           " ", 
+           RowBox[{"RGBColor", "[", 
+            RowBox[{"0.85", ",", " ", "0.33", ",", " ", "0.1"}], "]"}]}], 
+          "}"}], ",", "\n", "      ", "nCols"}], "\n", "    ", "]"}]}], ",", 
+      "\n", "    ", 
+      RowBox[{"Frame", " ", "->", " ", "True"}], ",", "\n", "    ", 
+      RowBox[{"FrameLabel", " ", "->", " ", 
+       RowBox[{"{", "\n", "      ", 
+        RowBox[{"None", ",", "\n", "      ", 
+         RowBox[{"Style", "[", 
+          RowBox[{
+           RowBox[{"\"\<Rhyme success (/\>\"", " ", "<>", " ", 
+            RowBox[{"ToString", "[", "nCouplets", "]"}], " ", "<>", 
+            " ", "\"\<)\>\""}], ",", " ", "14"}], "]"}]}], "\n", "    ", 
+        "}"}]}], ",", "\n", "    ", 
+      RowBox[{"PlotLabel", " ", "->", " ", 
+       RowBox[{"Style", "[", "\n", "      ", 
+        RowBox[{
+         RowBox[{"\"\<Recurrent Feedback: candle-mi (\>\"", " ", "<>", " ", 
+          "modelId", " ", "<>", " ", "\"\<)\\n\>\"", " ", "<>", "\n", 
+          "      ", "\"\<Full-sequence recompute (no KV cache)\>\""}], ",", 
+         "\n", "      ", "16", ",", " ", "Bold"}], "\n", "    ", "]"}]}], ",",
+       "\n", "    ", 
+      RowBox[{"PlotRange", " ", "->", " ", 
+       RowBox[{"{", 
+        RowBox[{"Automatic", ",", " ", 
+         RowBox[{"{", 
+          RowBox[{"0", ",", " ", 
+           RowBox[{"nCouplets", " ", "+", " ", "0.5"}]}], "}"}]}], "}"}]}], ",",
+       "\n", "    ", 
+      RowBox[{"GridLines", " ", "->", " ", 
+       RowBox[{"{", 
+        RowBox[{"None", ",", " ", 
+         RowBox[{"{", 
+          RowBox[{
+          "5", ",", " ", "baselineRhymes", ",", " ", "10", ",", " ", 
+           "nCouplets"}], "}"}]}], "}"}]}], ",", "\n", "    ", 
+      RowBox[{"GridLinesStyle", " ", "->", " ", 
+       RowBox[{"Directive", "[", 
+        RowBox[{"GrayLevel", "[", "0.85", "]"}], "]"}]}], ",", "\n", "    ", 
+      RowBox[{"ImageSize", " ", "->", " ", "700"}], ",", "\n", "    ", 
+      RowBox[{"AspectRatio", " ", "->", " ", "0.6"}], ",", "\n", "    ", 
+      RowBox[{"ImagePadding", " ", "->", " ", 
+       RowBox[{"{", 
+        RowBox[{
+         RowBox[{"{", 
+          RowBox[{"60", ",", " ", "20"}], "}"}], ",", " ", 
+         RowBox[{"{", 
+          RowBox[{"80", ",", " ", "50"}], "}"}]}], "}"}]}], ",", "\n", "    ", 
+      RowBox[{"FrameTicks", " ", "->", " ", 
+       RowBox[{"{", 
+        RowBox[{
+         RowBox[{"{", 
+          RowBox[{
+           RowBox[{"Range", "[", 
+            RowBox[{"0", ",", " ", "nCouplets"}], "]"}], ",", " ", 
+           "Automatic"}], "}"}], ",", " ", 
+         RowBox[{"{", 
+          RowBox[{"None", ",", " ", "None"}], "}"}]}], "}"}]}], ",", "\n", 
+      "    ", 
+      RowBox[{"LabelingFunction", " ", "->", " ", 
+       RowBox[{"(", 
+        RowBox[{
+         RowBox[{"Placed", "[", 
+          RowBox[{"#", ",", " ", "Above"}], "]"}], " ", "&"}], ")"}]}]}], 
+     "\n", "  ", "]"}], ",", "\n", "  ", 
+    RowBox[{"(*", " ", 
+     RowBox[{"Baseline", " ", "reference", " ", "line"}], " ", "*)"}], "\n", 
+    "  ", 
+    RowBox[{"Graphics", "[", 
+     RowBox[{"{", "\n", "    ", 
+      RowBox[{"Dashed", ",", " ", 
+       RowBox[{"GrayLevel", "[", "0.5", "]"}], ",", " ", 
+       RowBox[{"AbsoluteThickness", "[", "1.5", "]"}], ",", "\n", "    ", 
+       RowBox[{"Line", "[", 
+        RowBox[{"{", 
+         RowBox[{
+          RowBox[{"{", 
+           RowBox[{"0", ",", " ", "baselineRhymes"}], "}"}], ",", " ", 
+          RowBox[{"{", 
+           RowBox[{
+            RowBox[{"nCols", " ", "+", " ", "1"}], ",", " ", 
+            "baselineRhymes"}], "}"}]}], "}"}], "]"}], ",", "\n", "    ", 
+       RowBox[{"Text", "[", "\n", "      ", 
+        RowBox[{
+         RowBox[{"Style", "[", "\n", "        ", 
+          RowBox[{
+           RowBox[{"\"\<baseline = \>\"", " ", "<>", " ", 
+            RowBox[{"ToString", "[", "baselineRhymes", "]"}], " ", "<>", 
+            " ", "\"\</\>\"", " ", "<>", " ", 
+            RowBox[{"ToString", "[", "nCouplets", "]"}]}], ",", "\n", 
+           "        ", "11", ",", " ", "Italic", ",", " ", 
+           RowBox[{"GrayLevel", "[", "0.4", "]"}]}], "\n", "      ", "]"}], ",",
+          "\n", "      ", 
+         RowBox[{"{", 
+          RowBox[{
+           RowBox[{"nCols", " ", "+", " ", "0.5"}], ",", " ", 
+           RowBox[{"baselineRhymes", " ", "+", " ", "0.4"}]}], "}"}], ",", 
+         " ", 
+         RowBox[{"{", 
+          RowBox[{"1", ",", " ", 
+           RowBox[{"-", "1"}]}], "}"}]}], "\n", "    ", "]"}]}], "\n", "  ", 
+      "}"}], "]"}], ",", "\n", "  ", 
+    RowBox[{"(*", " ", 
+     RowBox[{
+     "Annotate", " ", "rescued", " ", "count", " ", "on", " ", "best", " ", 
+      "condition"}], " ", "*)"}], "\n", "  ", 
+    RowBox[{"If", "[", 
+     RowBox[{
+      RowBox[{
+       RowBox[{"Max", "[", "conditionRhymes", "]"}], " ", ">", " ", 
+       "baselineRhymes"}], ",", "\n", "    ", 
+      RowBox[{"Module", "[", 
+       RowBox[{
+        RowBox[{"{", 
+         RowBox[{
+          RowBox[{"bestIdx", " ", "=", " ", 
+           RowBox[{"First", "[", 
+            RowBox[{"Ordering", "[", 
+             RowBox[{"conditionRhymes", ",", " ", 
+              RowBox[{"-", "1"}]}], "]"}], "]"}]}], ",", " ", "rescued"}], 
+         "}"}], ",", "\n", "      ", 
+        RowBox[{
+         RowBox[{"rescued", " ", "=", " ", 
+          RowBox[{
+           RowBox[{"conditionRhymes", "[", 
+            RowBox[{"[", "bestIdx", "]"}], "]"}], " ", "-", " ", 
+           "baselineRhymes"}]}], ";", "\n", "      ", 
+         RowBox[{"Graphics", "[", 
+          RowBox[{"{", "\n", "        ", 
+           RowBox[{
+            RowBox[{"RGBColor", "[", 
+             RowBox[{"0.2", ",", " ", "0.4", ",", " ", "0.8"}], "]"}], ",", 
+            "\n", "        ", 
+            RowBox[{"Text", "[", "\n", "          ", 
+             RowBox[{
+              RowBox[{"Style", "[", "\n", "            ", 
+               RowBox[{
+                RowBox[{"\"\<+\>\"", " ", "<>", " ", 
+                 RowBox[{"ToString", "[", "rescued", "]"}], " ", "<>", 
+                 " ", "\"\< rescued\>\""}], ",", "\n", "            ", "12", ",",
+                 " ", "Bold", ",", " ", 
+                RowBox[{"RGBColor", "[", 
+                 RowBox[{"0.2", ",", " ", "0.4", ",", " ", "0.8"}], "]"}]}], 
+               "\n", "          ", "]"}], ",", "\n", "          ", 
+              RowBox[{"{", 
+               RowBox[{"bestIdx", ",", " ", 
+                RowBox[{
+                 RowBox[{"conditionRhymes", "[", 
+                  RowBox[{"[", "bestIdx", "]"}], "]"}], " ", "+", " ", 
+                 "0.8"}]}], "}"}], ",", " ", 
+              RowBox[{"{", 
+               RowBox[{"0", ",", " ", 
+                RowBox[{"-", "1"}]}], "}"}]}], "\n", "        ", "]"}]}], 
+           "\n", "      ", "}"}], "]"}]}]}], "\n", "    ", "]"}], ",", "\n", 
+      "    ", 
+      RowBox[{"Graphics", "[", 
+       RowBox[{"{", "}"}], "]"}]}], "\n", "  ", "]"}]}], "\n", 
+   "]"}]}]], "Input",
+ CellChangeTimes->{{3.982064809449127*^9, 3.9820648368973064`*^9}, {
+   3.982065409366251*^9, 3.982065413023123*^9}, 3.9820654843737774`*^9, {
+   3.9820658402430153`*^9, 
+   3.982065845018406*^9}},ExpressionUUID->"23e338d6-6d93-834b-8cea-\
+b6bf01c273cc"],
+
+Cell[BoxData[
+ GraphicsBox[{{
+    {Opacity[0], 
+     PointBox[{{-0.4116533139111435, 0.}, {4.35360524399126, 0.}}]}, {{}, 
+     {RGBColor[1., 0.78, 0.2], EdgeForm[{GrayLevel[0], Opacity[
+      0.6789999999999999], Thickness[Small]}], 
+      {GrayLevel[0.5], EdgeForm[{GrayLevel[0], Opacity[0.6789999999999999], 
+       Thickness[Small]}], 
+       TagBox[
+        DynamicBox[{
+          FEPrivate`If[
+           CurrentValue["MouseOver"], 
+           EdgeForm[{
+             GrayLevel[0.5], 
+             AbsoluteThickness[1.5], 
+             Opacity[0.66]}], {}, {}], 
+          
+          RectangleBox[{0.5487982520029133, 0.}, {1.4512017479970867`, 9.}, 
+           "RoundingRadius" -> 0]},
+         ImageSizeCache->{{192.11427163097807`, 
+          305.32810536934295`}, {-28.006591796874943`, 188.49340820312503`}}],
+        "DelayedMouseEffectStyle"]}, 
+      {RGBColor[0.2, 0.4, 0.8], EdgeForm[{GrayLevel[0], Opacity[
+       0.6789999999999999], Thickness[Small]}], 
+       TagBox[
+        DynamicBox[{
+          FEPrivate`If[
+           CurrentValue["MouseOver"], 
+           EdgeForm[{
+             GrayLevel[0.5], 
+             AbsoluteThickness[1.5], 
+             Opacity[0.66]}], {}, {}], 
+          
+          RectangleBox[{1.5487982520029133`, 0.}, {2.4512017479970867`, 11.}, 
+           "RoundingRadius" -> 0]},
+         ImageSizeCache->{{317.0183020771242, 
+          430.2321358154891}, {-76.00659179687491, 188.49340820312503`}}],
+        "DelayedMouseEffectStyle"]}, 
+      {RGBColor[0.85, 0.33, 0.1], EdgeForm[{GrayLevel[0], Opacity[
+       0.6789999999999999], Thickness[Small]}], 
+       TagBox[
+        DynamicBox[{
+          FEPrivate`If[
+           CurrentValue["MouseOver"], 
+           EdgeForm[{
+             GrayLevel[0.5], 
+             AbsoluteThickness[1.5], 
+             Opacity[0.66]}], {}, {}], 
+          
+          RectangleBox[{2.5487982520029133`, 0.}, {3.4512017479970867`, 9.}, 
+           "RoundingRadius" -> 0]},
+         ImageSizeCache->{{441.92233252327026`, 
+          555.1361662616351}, {-28.006591796874943`, 188.49340820312503`}}],
+        "DelayedMouseEffectStyle"]}}, {}, {}}, {}, {InsetBox[
+      StyleBox["\<\"Baseline\"\>",
+       StripOnInput->False,
+       FontSize->11], Offset[{0, -4}, {1., 0.}], ImageScaled[{0.5, 1}]], 
+     InsetBox["9", Offset[{0, 4}, {1., 9.}], ImageScaled[{0.5, 0}]], InsetBox[
+      StyleBox["\<\"Prefill\\nL8\[Dash]15, s=2.\"\>",
+       StripOnInput->False,
+       FontSize->11], Offset[{0, -4}, {2., 0.}], ImageScaled[{0.5, 1}]], 
+     InsetBox["11", Offset[{0, 4}, {2., 11.}], ImageScaled[{0.5, 0}]], 
+     InsetBox[
+      StyleBox["\<\"Sustained\\nL14\[Dash]15, s=1.\"\>",
+       StripOnInput->False,
+       FontSize->11], Offset[{0, -4}, {3., 0.}], ImageScaled[{0.5, 1}]], 
+     InsetBox["9", Offset[{0, 4}, {3., 9.}], 
+      ImageScaled[{0.5, 0}]]}, {}, {}, {}}, 
+   {GrayLevel[0.5], AbsoluteThickness[1.5], Dashing[{Small, Small}], 
+    LineBox[{{0, 9}, {4, 9}}], InsetBox[
+     StyleBox["\<\"baseline = 9/15\"\>",
+      StripOnInput->False,
+      LineColor->GrayLevel[0.4],
+      FrontFaceColor->GrayLevel[0.4],
+      BackFaceColor->GrayLevel[0.4],
+      GraphicsColor->GrayLevel[0.4],
+      FontSize->11,
+      FontSlant->Italic,
+      FontColor->GrayLevel[0.4]], {3.5, 9.4}, ImageScaled[{1, 0}]]}, 
+   {RGBColor[0.2, 0.4, 0.8], InsetBox[
+     StyleBox["\<\"+2 rescued\"\>",
+      StripOnInput->False,
+      LineColor->RGBColor[0.2, 0.4, 0.8],
+      FrontFaceColor->RGBColor[0.2, 0.4, 0.8],
+      BackFaceColor->RGBColor[0.2, 0.4, 0.8],
+      GraphicsColor->RGBColor[0.2, 0.4, 0.8],
+      FontSize->12,
+      FontWeight->Bold,
+      FontColor->RGBColor[0.2, 0.4, 0.8]], {2, 11.8}, NCache[
+     ImageScaled[{Rational[1, 2], 0}], ImageScaled[{0.5, 0}]]]}},
+  AspectRatio->0.6,
+  Axes->{False, False},
+  AxesLabel->{None, None},
+  AxesOrigin->{-0.4116533139111435, 0.},
+  CoordinatesToolOptions:>{"DisplayFunction" -> ({
+      Identity[
+       Part[#, 1]], 
+      Identity[
+       Part[#, 2]]}& ), "CopiedValueFunction" -> ({
+      Identity[
+       Part[#, 1]], 
+      Identity[
+       Part[#, 2]]}& )},
+  DefaultBaseStyle->{"PlotGraphics", "Graphics"},
+  DisplayFunction->Identity,
+  Frame->True,
+  FrameLabel->{{
+     FormBox[
+      TagBox[
+       StyleBox["\"Rhyme success (/15)\"", 14, StripOnInput -> False], 
+       HoldForm], TraditionalForm], None}, {None, None}},
+  FrameTicks->{{{{0, 
+       FormBox["0", TraditionalForm]}, {1, 
+       FormBox["1", TraditionalForm]}, {2, 
+       FormBox["2", TraditionalForm]}, {3, 
+       FormBox["3", TraditionalForm]}, {4, 
+       FormBox["4", TraditionalForm]}, {5, 
+       FormBox["5", TraditionalForm]}, {6, 
+       FormBox["6", TraditionalForm]}, {7, 
+       FormBox["7", TraditionalForm]}, {8, 
+       FormBox["8", TraditionalForm]}, {9, 
+       FormBox["9", TraditionalForm]}, {10, 
+       FormBox["10", TraditionalForm]}, {11, 
+       FormBox["11", TraditionalForm]}, {12, 
+       FormBox["12", TraditionalForm]}, {13, 
+       FormBox["13", TraditionalForm]}, {14, 
+       FormBox["14", TraditionalForm]}, {15, 
+       FormBox["15", TraditionalForm]}}, Automatic}, {None, None}},
+  GridLines->{None, {5, 9, 10, 15}},
+  GridLinesStyle->Directive[
+    GrayLevel[0.85]],
+  ImagePadding->{{60, 20}, {80, 50}},
+  ImageSize->700,
+  PlotInteractivity:>True,
+  PlotLabel->FormBox[
+    StyleBox[
+    "\"Recurrent Feedback: candle-mi \
+(meta-llama/Llama-3.2-1B)\\nFull-sequence recompute (no KV cache)\"", 16, 
+     Bold, StripOnInput -> False], TraditionalForm],
+  PlotRange->{{All, All}, {0, 15.5}},
+  PlotRangePadding->{{
+     Scaled[0.02], 
+     Scaled[0.02]}, {0, 0}},
+  Ticks->{None, Automatic}]], "Output",
+ CellChangeTimes->{3.982064838156275*^9, 3.982065413635729*^9, 
+  3.9820654870370865`*^9},
+ CellLabel->"Out[39]=",ExpressionUUID->"cd076a1d-1204-9a49-977d-43fa49045deb"]
+}, Open  ]],
+
+Cell[BoxData[
+ RowBox[{
+  RowBox[{"Export", "[", "\n", "  ", 
+   RowBox[{
+    RowBox[{"FileNameJoin", "[", 
+     RowBox[{"{", 
+      RowBox[{
+       RowBox[{"NotebookDirectory", "[", "]"}], ",", 
+       " ", "\"\<recurrent_feedback_conditions.png\>\""}], "}"}], "]"}], ",", 
+    "\n", "  ", "fig1", ",", " ", 
+    RowBox[{"ImageResolution", " ", "->", " ", "300"}]}], "\n", "]"}], 
+  ";"}]], "Input",
+ CellChangeTimes->{{3.982064853559265*^9, 
+  3.9820648540144024`*^9}},ExpressionUUID->"81b016f2-a836-3c42-ab04-\
+8603380cb81b"],
+
+Cell[BoxData[
+ RowBox[{
+  RowBox[{"(*", " ", 
+   RowBox[{
+   "===", "===", "===", "===", "===", "===", "===", "===", "===", "===", "===",
+     "===", "===", "===", "===", "===", "===", "===", "===", "==="}], " ", 
+   "*)"}], "\n", 
+  RowBox[{"(*", " ", 
+   RowBox[{
+    RowBox[{"FIGURE", " ", "2"}], ":", " ", 
+    RowBox[{"Per", "-", 
+     RowBox[{"Couplet", " ", "Success", " ", "Grid"}]}]}], 
+   "                            ", "*)"}], "\n", 
+  RowBox[{"(*", " ", 
+   RowBox[{
+   "===", "===", "===", "===", "===", "===", "===", "===", "===", "===", "===",
+     "===", "===", "===", "===", "===", "===", "===", "===", "==="}], " ", 
+   "*)"}], "\n", "\n", 
+  RowBox[{
+   RowBox[{
+    RowBox[{"successColor", " ", "=", " ", 
+     RowBox[{"RGBColor", "[", 
+      RowBox[{"0.3", ",", " ", "0.75", ",", " ", "0.35"}], "]"}]}], ";"}], 
+   "  ", 
+   RowBox[{"(*", " ", "Green", " ", "*)"}], "\n", 
+   RowBox[{
+    RowBox[{"failureColor", " ", "=", " ", 
+     RowBox[{"RGBColor", "[", 
+      RowBox[{"0.9", ",", " ", "0.3", ",", " ", "0.3"}], "]"}]}], ";"}], 
+   "    ", 
+   RowBox[{"(*", " ", "Red", " ", "*)"}], "\n", 
+   RowBox[{
+    RowBox[{"convertColor", " ", "=", " ", 
+     RowBox[{"RGBColor", "[", 
+      RowBox[{"1.0", ",", " ", "0.85", ",", " ", "0.0"}], "]"}]}], ";"}], 
+   "   ", 
+   RowBox[{"(*", " ", 
+    RowBox[{
+     RowBox[{"Gold", " ", "--"}], " ", "for", " ", "conversion", " ", 
+     "highlight"}], " ", "*)"}], "\n", "\n", 
+   RowBox[{"fig2grid", " ", "=", " ", 
+    RowBox[{"Table", "[", "\n", "  ", 
+     RowBox[{
+      RowBox[{"Module", "[", 
+       RowBox[{
+        RowBox[{"{", 
+         RowBox[{
+          RowBox[{"val", " ", "=", " ", 
+           RowBox[{"coupletGrid", "[", 
+            RowBox[{"[", 
+             RowBox[{"row", ",", " ", 
+              RowBox[{"col", " ", "+", " ", "2"}]}], "]"}], "]"}]}], ",", " ", 
+          RowBox[{"word", " ", "=", " ", 
+           RowBox[{"generatedWords", "[", 
+            RowBox[{"[", 
+             RowBox[{"row", ",", " ", 
+              RowBox[{"col", " ", "+", " ", "1"}]}], "]"}], "]"}]}]}], "}"}], 
+        ",", "\n", "    ", 
+        RowBox[{"{", 
+         RowBox[{
+          RowBox[{"If", "[", 
+           RowBox[{
+            RowBox[{"val", " ", "==", " ", "1"}], ",", " ", "successColor", ",",
+             " ", "failureColor"}], "]"}], ",", "\n", "     ", 
+          RowBox[{"Rectangle", "[", 
+           RowBox[{
+            RowBox[{"{", 
+             RowBox[{
+              RowBox[{"col", " ", "-", " ", "1"}], ",", " ", 
+              RowBox[{"nCouplets", " ", "-", " ", "row"}]}], "}"}], ",", " ", 
+            RowBox[{"{", 
+             RowBox[{"col", ",", " ", 
+              RowBox[{
+              "nCouplets", " ", "+", " ", "1", " ", "-", " ", "row"}]}], 
+             "}"}]}], "]"}], ",", "\n", "     ", 
+          RowBox[{"Text", "[", "\n", "       ", 
+           RowBox[{
+            RowBox[{"Style", "[", 
+             RowBox[{
+             "word", ",", " ", "10", ",", " ", "Bold", ",", " ", "White"}], 
+             "]"}], ",", "\n", "       ", 
+            RowBox[{"{", 
+             RowBox[{
+              RowBox[{"col", " ", "-", " ", "0.5"}], ",", " ", 
+              RowBox[{
+              "nCouplets", " ", "+", " ", "0.5", " ", "-", " ", "row"}]}], 
+             "}"}]}], "\n", "     ", "]"}]}], "}"}]}], "\n", "  ", "]"}], ",",
+       "\n", "  ", 
+      RowBox[{"{", 
+       RowBox[{"row", ",", " ", "nCouplets"}], "}"}], ",", " ", 
+      RowBox[{"{", 
+       RowBox[{"col", ",", " ", "nCols"}], "}"}]}], "\n", 
+     "]"}]}]}]}]], "Input",
+ CellChangeTimes->{
+  3.982065240407009*^9, {3.982065282445057*^9, 3.982065285683941*^9}, {
+   3.982065526909439*^9, 3.982065560607027*^9}, 
+   3.982065638461561*^9},ExpressionUUID->"da18d050-ad95-c744-8f9c-\
+eb8e57e4abe1"],
+
+Cell[CellGroupData[{
+
+Cell[BoxData[
+ RowBox[{
+  RowBox[{"(*", " ", 
+   RowBox[{"Identify", " ", "resistant", " ", 
+    RowBox[{"failures", ":", " ", 
+     RowBox[{"fail", " ", "under", " ", "ALL", " ", "conditions"}]}]}], " ", 
+   "*)"}], "\n", 
+  RowBox[{"resistantIds", " ", "=", " ", 
+   RowBox[{"Select", "[", "\n", "  ", 
+    RowBox[{
+     RowBox[{"Range", "[", "nCouplets", "]"}], ",", "\n", "  ", 
+     RowBox[{
+      RowBox[{"AllTrue", "[", 
+       RowBox[{
+        RowBox[{"coupletGrid", "[", 
+         RowBox[{"[", 
+          RowBox[{"#", ",", " ", 
+           RowBox[{"3", " ", ";;", " ", 
+            RowBox[{"nCols", " ", "+", " ", "2"}]}]}], "]"}], "]"}], ",", " ", 
+        RowBox[{
+         RowBox[{"#", " ", "==", " ", "0"}], " ", "&"}]}], "]"}], " ", 
+      "&"}]}], "\n", "]"}]}]}]], "Input",
+ CellChangeTimes->{{3.9820656482351665`*^9, 3.982065721086418*^9}},
+ CellLabel->"In[72]:=",ExpressionUUID->"807c1a75-25d6-bc48-be2e-1aa00c1e5903"],
+
+Cell[BoxData[
+ RowBox[{"{", 
+  RowBox[{"2", ",", "3", ",", "4", ",", "7"}], "}"}]], "Output",
+ CellChangeTimes->{3.9820657248869114`*^9},
+ CellLabel->"Out[72]=",ExpressionUUID->"a207b281-1f7f-9147-9465-ec483813ede4"]
+}, Open  ]],
+
+Cell[CellGroupData[{
+
+Cell[BoxData[
+ RowBox[{"resistantCoupletIds", " ", "=", " ", 
+  RowBox[{
+   RowBox[{
+    RowBox[{"coupletGrid", "[", 
+     RowBox[{"[", 
+      RowBox[{"#", ",", " ", "1"}], "]"}], "]"}], " ", "&"}], " ", "/@", " ", 
+   "resistantIds"}]}]], "Input",
+ CellLabel->"In[73]:=",ExpressionUUID->"55a6fd40-37d1-7b4c-89e3-cf77495d1308"],
+
+Cell[BoxData[
+ RowBox[{"{", 
+  RowBox[{"2", ",", "3", ",", "4", ",", "7"}], "}"}]], "Output",
+ CellChangeTimes->{3.98206572615543*^9},
+ CellLabel->"Out[73]=",ExpressionUUID->"a5246091-c5ab-2746-8772-ee7ffdd0544a"]
+}, Open  ]],
+
+Cell[CellGroupData[{
+
+Cell[BoxData[
+ RowBox[{
+  RowBox[{"(*", " ", 
+   RowBox[{
+    RowBox[{"Row", " ", 
+     RowBox[{"labels", ":", " ", "\"\<1. light\>\""}]}], ",", 
+    " ", "\"\<2. play\>\"", ",", " ", "..."}], " ", "*)"}], "\n", 
+  RowBox[{"rowLabels", " ", "=", " ", 
+   RowBox[{"Table", "[", "\n", "  ", 
+    RowBox[{
+     RowBox[{"Text", "[", "\n", "    ", 
+      RowBox[{
+       RowBox[{"Style", "[", "\n", "      ", 
+        RowBox[{
+         RowBox[{"StringJoin", "[", 
+          RowBox[{
+           RowBox[{"ToString", "[", 
+            RowBox[{"coupletGrid", "[", 
+             RowBox[{"[", 
+              RowBox[{"row", ",", " ", "1"}], "]"}], "]"}], "]"}], ",", 
+           " ", "\"\<. \>\"", ",", " ", 
+           RowBox[{"coupletGrid", "[", 
+            RowBox[{"[", 
+             RowBox[{"row", ",", " ", "2"}], "]"}], "]"}]}], "]"}], ",", "\n",
+          "      ", "11", ",", "\n", "      ", 
+         RowBox[{"If", "[", 
+          RowBox[{
+           RowBox[{"MemberQ", "[", 
+            RowBox[{"resistantIds", ",", " ", "row"}], "]"}], ",", " ", 
+           "Bold", ",", " ", "Plain"}], "]"}], ",", "\n", "      ", 
+         RowBox[{"If", "[", 
+          RowBox[{
+           RowBox[{"MemberQ", "[", 
+            RowBox[{"resistantIds", ",", " ", "row"}], "]"}], ",", " ", 
+           RowBox[{"RGBColor", "[", 
+            RowBox[{"1.0", ",", " ", "0.4", ",", " ", "0.4"}], "]"}], ",", 
+           " ", "White"}], "]"}]}], "\n", "    ", "]"}], ",", "\n", "    ", 
+       RowBox[{"{", 
+        RowBox[{
+         RowBox[{"-", "0.15"}], ",", " ", 
+         RowBox[{"nCouplets", " ", "+", " ", "0.5", " ", "-", " ", "row"}]}], 
+        "}"}], ",", " ", 
+       RowBox[{"{", 
+        RowBox[{"1", ",", " ", "0"}], "}"}]}], "\n", "  ", "]"}], ",", "\n", 
+     "  ", 
+     RowBox[{"{", 
+      RowBox[{"row", ",", " ", "nCouplets"}], "}"}]}], "\n", 
+    "]"}]}]}]], "Input",
+ CellLabel->"In[74]:=",ExpressionUUID->"b47b5553-ecad-114a-8f3b-b06af28127d8"],
+
+Cell[BoxData[
+ RowBox[{"{", 
+  RowBox[{
+   RowBox[{"Text", "[", 
+    RowBox[{
+     StyleBox["\<\"1. light\"\>",
+      StripOnInput->False,
+      LineColor->GrayLevel[1],
+      FrontFaceColor->GrayLevel[1],
+      BackFaceColor->GrayLevel[1],
+      GraphicsColor->GrayLevel[1],
+      FontSize->11,
+      FontWeight->Plain,
+      FontSlant->Plain,
+      FontVariations->{"StrikeThrough"->False,
+      "Underline"->False},
+      FontColor->GrayLevel[1]], ",", 
+     RowBox[{"{", 
+      RowBox[{
+       RowBox[{"-", "0.15`"}], ",", "14.5`"}], "}"}], ",", 
+     RowBox[{"{", 
+      RowBox[{"1", ",", "0"}], "}"}]}], "]"}], ",", 
+   RowBox[{"Text", "[", 
+    RowBox[{
+     StyleBox["\<\"2. play\"\>",
+      StripOnInput->False,
+      LineColor->RGBColor[1., 0.4, 0.4],
+      FrontFaceColor->RGBColor[1., 0.4, 0.4],
+      BackFaceColor->RGBColor[1., 0.4, 0.4],
+      GraphicsColor->RGBColor[1., 0.4, 0.4],
+      FontSize->11,
+      FontWeight->Bold,
+      FontColor->RGBColor[1., 0.4, 0.4]], ",", 
+     RowBox[{"{", 
+      RowBox[{
+       RowBox[{"-", "0.15`"}], ",", "13.5`"}], "}"}], ",", 
+     RowBox[{"{", 
+      RowBox[{"1", ",", "0"}], "}"}]}], "]"}], ",", 
+   RowBox[{"Text", "[", 
+    RowBox[{
+     StyleBox["\<\"3. sound\"\>",
+      StripOnInput->False,
+      LineColor->RGBColor[1., 0.4, 0.4],
+      FrontFaceColor->RGBColor[1., 0.4, 0.4],
+      BackFaceColor->RGBColor[1., 0.4, 0.4],
+      GraphicsColor->RGBColor[1., 0.4, 0.4],
+      FontSize->11,
+      FontWeight->Bold,
+      FontColor->RGBColor[1., 0.4, 0.4]], ",", 
+     RowBox[{"{", 
+      RowBox[{
+       RowBox[{"-", "0.15`"}], ",", "12.5`"}], "}"}], ",", 
+     RowBox[{"{", 
+      RowBox[{"1", ",", "0"}], "}"}]}], "]"}], ",", 
+   RowBox[{"Text", "[", 
+    RowBox[{
+     StyleBox["\<\"4. rain\"\>",
+      StripOnInput->False,
+      LineColor->RGBColor[1., 0.4, 0.4],
+      FrontFaceColor->RGBColor[1., 0.4, 0.4],
+      BackFaceColor->RGBColor[1., 0.4, 0.4],
+      GraphicsColor->RGBColor[1., 0.4, 0.4],
+      FontSize->11,
+      FontWeight->Bold,
+      FontColor->RGBColor[1., 0.4, 0.4]], ",", 
+     RowBox[{"{", 
+      RowBox[{
+       RowBox[{"-", "0.15`"}], ",", "11.5`"}], "}"}], ",", 
+     RowBox[{"{", 
+      RowBox[{"1", ",", "0"}], "}"}]}], "]"}], ",", 
+   RowBox[{"Text", "[", 
+    RowBox[{
+     StyleBox["\<\"5. time\"\>",
+      StripOnInput->False,
+      LineColor->GrayLevel[1],
+      FrontFaceColor->GrayLevel[1],
+      BackFaceColor->GrayLevel[1],
+      GraphicsColor->GrayLevel[1],
+      FontSize->11,
+      FontWeight->Plain,
+      FontSlant->Plain,
+      FontVariations->{"StrikeThrough"->False,
+      "Underline"->False},
+      FontColor->GrayLevel[1]], ",", 
+     RowBox[{"{", 
+      RowBox[{
+       RowBox[{"-", "0.15`"}], ",", "10.5`"}], "}"}], ",", 
+     RowBox[{"{", 
+      RowBox[{"1", ",", "0"}], "}"}]}], "]"}], ",", 
+   RowBox[{"Text", "[", 
+    RowBox[{
+     StyleBox["\<\"6. air\"\>",
+      StripOnInput->False,
+      LineColor->GrayLevel[1],
+      FrontFaceColor->GrayLevel[1],
+      BackFaceColor->GrayLevel[1],
+      GraphicsColor->GrayLevel[1],
+      FontSize->11,
+      FontWeight->Plain,
+      FontSlant->Plain,
+      FontVariations->{"StrikeThrough"->False,
+      "Underline"->False},
+      FontColor->GrayLevel[1]], ",", 
+     RowBox[{"{", 
+      RowBox[{
+       RowBox[{"-", "0.15`"}], ",", "9.5`"}], "}"}], ",", 
+     RowBox[{"{", 
+      RowBox[{"1", ",", "0"}], "}"}]}], "]"}], ",", 
+   RowBox[{"Text", "[", 
+    RowBox[{
+     StyleBox["\<\"7. gold\"\>",
+      StripOnInput->False,
+      LineColor->RGBColor[1., 0.4, 0.4],
+      FrontFaceColor->RGBColor[1., 0.4, 0.4],
+      BackFaceColor->RGBColor[1., 0.4, 0.4],
+      GraphicsColor->RGBColor[1., 0.4, 0.4],
+      FontSize->11,
+      FontWeight->Bold,
+      FontColor->RGBColor[1., 0.4, 0.4]], ",", 
+     RowBox[{"{", 
+      RowBox[{
+       RowBox[{"-", "0.15`"}], ",", "8.5`"}], "}"}], ",", 
+     RowBox[{"{", 
+      RowBox[{"1", ",", "0"}], "}"}]}], "]"}], ",", 
+   RowBox[{"Text", "[", 
+    RowBox[{
+     StyleBox["\<\"8. fire\"\>",
+      StripOnInput->False,
+      LineColor->GrayLevel[1],
+      FrontFaceColor->GrayLevel[1],
+      BackFaceColor->GrayLevel[1],
+      GraphicsColor->GrayLevel[1],
+      FontSize->11,
+      FontWeight->Plain,
+      FontSlant->Plain,
+      FontVariations->{"StrikeThrough"->False,
+      "Underline"->False},
+      FontColor->GrayLevel[1]], ",", 
+     RowBox[{"{", 
+      RowBox[{
+       RowBox[{"-", "0.15`"}], ",", "7.5`"}], "}"}], ",", 
+     RowBox[{"{", 
+      RowBox[{"1", ",", "0"}], "}"}]}], "]"}], ",", 
+   RowBox[{"Text", "[", 
+    RowBox[{
+     StyleBox["\<\"9. stone\"\>",
+      StripOnInput->False,
+      LineColor->GrayLevel[1],
+      FrontFaceColor->GrayLevel[1],
+      BackFaceColor->GrayLevel[1],
+      GraphicsColor->GrayLevel[1],
+      FontSize->11,
+      FontWeight->Plain,
+      FontSlant->Plain,
+      FontVariations->{"StrikeThrough"->False,
+      "Underline"->False},
+      FontColor->GrayLevel[1]], ",", 
+     RowBox[{"{", 
+      RowBox[{
+       RowBox[{"-", "0.15`"}], ",", "6.5`"}], "}"}], ",", 
+     RowBox[{"{", 
+      RowBox[{"1", ",", "0"}], "}"}]}], "]"}], ",", 
+   RowBox[{"Text", "[", 
+    RowBox[{
+     StyleBox["\<\"10. dream\"\>",
+      StripOnInput->False,
+      LineColor->GrayLevel[1],
+      FrontFaceColor->GrayLevel[1],
+      BackFaceColor->GrayLevel[1],
+      GraphicsColor->GrayLevel[1],
+      FontSize->11,
+      FontWeight->Plain,
+      FontSlant->Plain,
+      FontVariations->{"StrikeThrough"->False,
+      "Underline"->False},
+      FontColor->GrayLevel[1]], ",", 
+     RowBox[{"{", 
+      RowBox[{
+       RowBox[{"-", "0.15`"}], ",", "5.5`"}], "}"}], ",", 
+     RowBox[{"{", 
+      RowBox[{"1", ",", "0"}], "}"}]}], "]"}], ",", 
+   RowBox[{"Text", "[", 
+    RowBox[{
+     StyleBox["\<\"11. strange\"\>",
+      StripOnInput->False,
+      LineColor->GrayLevel[1],
+      FrontFaceColor->GrayLevel[1],
+      BackFaceColor->GrayLevel[1],
+      GraphicsColor->GrayLevel[1],
+      FontSize->11,
+      FontWeight->Plain,
+      FontSlant->Plain,
+      FontVariations->{"StrikeThrough"->False,
+      "Underline"->False},
+      FontColor->GrayLevel[1]], ",", 
+     RowBox[{"{", 
+      RowBox[{
+       RowBox[{"-", "0.15`"}], ",", "4.5`"}], "}"}], ",", 
+     RowBox[{"{", 
+      RowBox[{"1", ",", "0"}], "}"}]}], "]"}], ",", 
+   RowBox[{"Text", "[", 
+    RowBox[{
+     StyleBox["\<\"12. love\"\>",
+      StripOnInput->False,
+      LineColor->GrayLevel[1],
+      FrontFaceColor->GrayLevel[1],
+      BackFaceColor->GrayLevel[1],
+      GraphicsColor->GrayLevel[1],
+      FontSize->11,
+      FontWeight->Plain,
+      FontSlant->Plain,
+      FontVariations->{"StrikeThrough"->False,
+      "Underline"->False},
+      FontColor->GrayLevel[1]], ",", 
+     RowBox[{"{", 
+      RowBox[{
+       RowBox[{"-", "0.15`"}], ",", "3.5`"}], "}"}], ",", 
+     RowBox[{"{", 
+      RowBox[{"1", ",", "0"}], "}"}]}], "]"}], ",", 
+   RowBox[{"Text", "[", 
+    RowBox[{
+     StyleBox["\<\"13. truth\"\>",
+      StripOnInput->False,
+      LineColor->GrayLevel[1],
+      FrontFaceColor->GrayLevel[1],
+      BackFaceColor->GrayLevel[1],
+      GraphicsColor->GrayLevel[1],
+      FontSize->11,
+      FontWeight->Plain,
+      FontSlant->Plain,
+      FontVariations->{"StrikeThrough"->False,
+      "Underline"->False},
+      FontColor->GrayLevel[1]], ",", 
+     RowBox[{"{", 
+      RowBox[{
+       RowBox[{"-", "0.15`"}], ",", "2.5`"}], "}"}], ",", 
+     RowBox[{"{", 
+      RowBox[{"1", ",", "0"}], "}"}]}], "]"}], ",", 
+   RowBox[{"Text", "[", 
+    RowBox[{
+     StyleBox["\<\"14. world\"\>",
+      StripOnInput->False,
+      LineColor->GrayLevel[1],
+      FrontFaceColor->GrayLevel[1],
+      BackFaceColor->GrayLevel[1],
+      GraphicsColor->GrayLevel[1],
+      FontSize->11,
+      FontWeight->Plain,
+      FontSlant->Plain,
+      FontVariations->{"StrikeThrough"->False,
+      "Underline"->False},
+      FontColor->GrayLevel[1]], ",", 
+     RowBox[{"{", 
+      RowBox[{
+       RowBox[{"-", "0.15`"}], ",", "1.5`"}], "}"}], ",", 
+     RowBox[{"{", 
+      RowBox[{"1", ",", "0"}], "}"}]}], "]"}], ",", 
+   RowBox[{"Text", "[", 
+    RowBox[{
+     StyleBox["\<\"15. earth\"\>",
+      StripOnInput->False,
+      LineColor->GrayLevel[1],
+      FrontFaceColor->GrayLevel[1],
+      BackFaceColor->GrayLevel[1],
+      GraphicsColor->GrayLevel[1],
+      FontSize->11,
+      FontWeight->Plain,
+      FontSlant->Plain,
+      FontVariations->{"StrikeThrough"->False,
+      "Underline"->False},
+      FontColor->GrayLevel[1]], ",", 
+     RowBox[{"{", 
+      RowBox[{
+       RowBox[{"-", "0.15`"}], ",", "0.5`"}], "}"}], ",", 
+     RowBox[{"{", 
+      RowBox[{"1", ",", "0"}], "}"}]}], "]"}]}], "}"}]], "Output",
+ CellChangeTimes->{3.9820657273609657`*^9},
+ CellLabel->"Out[74]=",ExpressionUUID->"f6d7e5a3-858f-9a49-94e2-0fe323c6d4bd"]
+}, Open  ]],
+
+Cell[CellGroupData[{
+
+Cell[BoxData[
+ RowBox[{
+  RowBox[{"(*", " ", 
+   RowBox[{"Column", " ", "labels"}], " ", "*)"}], "\n", 
+  RowBox[{"colLabels", " ", "=", " ", 
+   RowBox[{"Table", "[", "\n", "  ", 
+    RowBox[{
+     RowBox[{"Text", "[", "\n", "    ", 
+      RowBox[{
+       RowBox[{"Style", "[", 
+        RowBox[{
+         RowBox[{"conditionLabels", "[", 
+          RowBox[{"[", "col", "]"}], "]"}], ",", " ", "10", ",", " ", "Bold", 
+         ",", " ", "White"}], "]"}], ",", "\n", "    ", 
+       RowBox[{"{", 
+        RowBox[{
+         RowBox[{"col", " ", "-", " ", "0.5"}], ",", " ", 
+         RowBox[{"nCouplets", " ", "+", " ", "0.25"}]}], "}"}], ",", " ", 
+       RowBox[{"{", 
+        RowBox[{"0", ",", " ", 
+         RowBox[{"-", "1"}]}], "}"}]}], "\n", "  ", "]"}], ",", "\n", "  ", 
+     RowBox[{"{", 
+      RowBox[{"col", ",", " ", "nCols"}], "}"}]}], "\n", "]"}]}]}]], "Input",
+ CellLabel->"In[75]:=",ExpressionUUID->"475c9585-ed4a-c94f-bf96-bcfcf819d8d8"],
+
+Cell[BoxData[
+ RowBox[{"{", 
+  RowBox[{
+   RowBox[{"Text", "[", 
+    RowBox[{
+     StyleBox["\<\"Baseline\"\>",
+      StripOnInput->False,
+      LineColor->GrayLevel[1],
+      FrontFaceColor->GrayLevel[1],
+      BackFaceColor->GrayLevel[1],
+      GraphicsColor->GrayLevel[1],
+      FontSize->10,
+      FontWeight->Bold,
+      FontColor->GrayLevel[1]], ",", 
+     RowBox[{"{", 
+      RowBox[{"0.5`", ",", "15.25`"}], "}"}], ",", 
+     RowBox[{"{", 
+      RowBox[{"0", ",", 
+       RowBox[{"-", "1"}]}], "}"}]}], "]"}], ",", 
+   RowBox[{"Text", "[", 
+    RowBox[{
+     StyleBox["\<\"Prefill\\nL8\[Dash]15, s=2.\"\>",
+      StripOnInput->False,
+      LineColor->GrayLevel[1],
+      FrontFaceColor->GrayLevel[1],
+      BackFaceColor->GrayLevel[1],
+      GraphicsColor->GrayLevel[1],
+      FontSize->10,
+      FontWeight->Bold,
+      FontColor->GrayLevel[1]], ",", 
+     RowBox[{"{", 
+      RowBox[{"1.5`", ",", "15.25`"}], "}"}], ",", 
+     RowBox[{"{", 
+      RowBox[{"0", ",", 
+       RowBox[{"-", "1"}]}], "}"}]}], "]"}], ",", 
+   RowBox[{"Text", "[", 
+    RowBox[{
+     StyleBox["\<\"Sustained\\nL14\[Dash]15, s=1.\"\>",
+      StripOnInput->False,
+      LineColor->GrayLevel[1],
+      FrontFaceColor->GrayLevel[1],
+      BackFaceColor->GrayLevel[1],
+      GraphicsColor->GrayLevel[1],
+      FontSize->10,
+      FontWeight->Bold,
+      FontColor->GrayLevel[1]], ",", 
+     RowBox[{"{", 
+      RowBox[{"2.5`", ",", "15.25`"}], "}"}], ",", 
+     RowBox[{"{", 
+      RowBox[{"0", ",", 
+       RowBox[{"-", "1"}]}], "}"}]}], "]"}]}], "}"}]], "Output",
+ CellChangeTimes->{3.9820657300887375`*^9},
+ CellLabel->"Out[75]=",ExpressionUUID->"4f42c32b-b064-5343-865c-0f1beef5e096"]
+}, Open  ]],
+
+Cell[BoxData[
+ RowBox[{
+  RowBox[{"(*", " ", 
+   RowBox[{
+    RowBox[{
+     RowBox[{"Find", " ", "rescued", " ", 
+      RowBox[{"couplets", ":", " ", "baseline"}]}], "=", "0"}], ",", " ", 
+    RowBox[{
+     RowBox[{"any", " ", "recurrent"}], "=", "1"}]}], " ", "*)"}], "\n", 
+  RowBox[{
+   RowBox[{
+    RowBox[{"rescuedCells", " ", "=", " ", 
+     RowBox[{"{", "}"}]}], ";"}], "\n", 
+   RowBox[{"Do", "[", "\n", "  ", 
+    RowBox[{
+     RowBox[{"Do", "[", "\n", "    ", 
+      RowBox[{
+       RowBox[{"If", "[", 
+        RowBox[{
+         RowBox[{
+          RowBox[{
+           RowBox[{"coupletGrid", "[", 
+            RowBox[{"[", 
+             RowBox[{"row", ",", " ", "3"}], "]"}], "]"}], " ", "==", " ", 
+           "0"}], " ", "&&", " ", 
+          RowBox[{
+           RowBox[{"coupletGrid", "[", 
+            RowBox[{"[", 
+             RowBox[{"row", ",", " ", 
+              RowBox[{"col", " ", "+", " ", "2"}]}], "]"}], "]"}], " ", "==", 
+           " ", "1"}]}], ",", "\n", "      ", 
+         RowBox[{"AppendTo", "[", 
+          RowBox[{"rescuedCells", ",", " ", 
+           RowBox[{"{", 
+            RowBox[{"row", ",", " ", "col"}], "}"}]}], "]"}]}], "\n", "    ", 
+        "]"}], ",", "\n", "    ", 
+       RowBox[{"{", 
+        RowBox[{"col", ",", " ", "2", ",", " ", "nCols"}], "}"}]}], "\n", 
+      "  ", "]"}], ",", "\n", "  ", 
+     RowBox[{"{", 
+      RowBox[{"row", ",", " ", "nCouplets"}], "}"}]}], "\n", 
+    "]"}]}]}]], "Input",
+ CellLabel->"In[76]:=",ExpressionUUID->"37d9775e-c1fb-c04a-b397-4c8f6eab5672"],
+
+Cell[CellGroupData[{
+
+Cell[BoxData[
+ RowBox[{
+  RowBox[{"(*", " ", 
+   RowBox[{
+   "Gold", " ", "border", " ", "on", " ", "rescued", " ", "couplets"}], " ", 
+   "*)"}], "\n", 
+  RowBox[{"rescueHighlights", " ", "=", " ", 
+   RowBox[{"Table", "[", "\n", "  ", 
+    RowBox[{
+     RowBox[{"{", 
+      RowBox[{"convertColor", ",", " ", 
+       RowBox[{"AbsoluteThickness", "[", "3", "]"}], ",", "\n", "   ", 
+       RowBox[{"Line", "[", 
+        RowBox[{"{", "\n", "     ", 
+         RowBox[{
+          RowBox[{"{", 
+           RowBox[{
+            RowBox[{
+             RowBox[{"cell", "[", 
+              RowBox[{"[", "2", "]"}], "]"}], " ", "-", " ", "1"}], ",", " ", 
+            RowBox[{"nCouplets", " ", "-", " ", 
+             RowBox[{"cell", "[", 
+              RowBox[{"[", "1", "]"}], "]"}]}]}], "}"}], ",", "\n", "     ", 
+          RowBox[{"{", 
+           RowBox[{
+            RowBox[{"cell", "[", 
+             RowBox[{"[", "2", "]"}], "]"}], ",", " ", 
+            RowBox[{"nCouplets", " ", "-", " ", 
+             RowBox[{"cell", "[", 
+              RowBox[{"[", "1", "]"}], "]"}]}]}], "}"}], ",", "\n", "     ", 
+          RowBox[{"{", 
+           RowBox[{
+            RowBox[{"cell", "[", 
+             RowBox[{"[", "2", "]"}], "]"}], ",", " ", 
+            RowBox[{"nCouplets", " ", "+", " ", "1", " ", "-", " ", 
+             RowBox[{"cell", "[", 
+              RowBox[{"[", "1", "]"}], "]"}]}]}], "}"}], ",", "\n", "     ", 
+          RowBox[{"{", 
+           RowBox[{
+            RowBox[{
+             RowBox[{"cell", "[", 
+              RowBox[{"[", "2", "]"}], "]"}], " ", "-", " ", "1"}], ",", " ", 
+            RowBox[{"nCouplets", " ", "+", " ", "1", " ", "-", " ", 
+             RowBox[{"cell", "[", 
+              RowBox[{"[", "1", "]"}], "]"}]}]}], "}"}], ",", "\n", "     ", 
+          RowBox[{"{", 
+           RowBox[{
+            RowBox[{
+             RowBox[{"cell", "[", 
+              RowBox[{"[", "2", "]"}], "]"}], " ", "-", " ", "1"}], ",", " ", 
+            RowBox[{"nCouplets", " ", "-", " ", 
+             RowBox[{"cell", "[", 
+              RowBox[{"[", "1", "]"}], "]"}]}]}], "}"}]}], "\n", "   ", "}"}],
+         "]"}]}], "}"}], ",", "\n", "  ", 
+     RowBox[{"{", 
+      RowBox[{"cell", ",", " ", "rescuedCells"}], "}"}]}], "\n", 
+    "]"}]}]}]], "Input",
+ CellLabel->"In[78]:=",ExpressionUUID->"d8f1842e-d53a-7c48-b3c4-719d4ee4dbfb"],
+
+Cell[BoxData[
+ RowBox[{"{", 
+  RowBox[{
+   RowBox[{"{", 
+    RowBox[{
+     TemplateBox[<|"color" -> RGBColor[1., 0.85, 0.]|>,
+      "RGBColorSwatchTemplate"], ",", 
+     RowBox[{"AbsoluteThickness", "[", "3", "]"}], ",", 
+     RowBox[{"Line", "[", 
+      RowBox[{"{", 
+       RowBox[{
+        RowBox[{"{", 
+         RowBox[{"1", ",", "7"}], "}"}], ",", 
+        RowBox[{"{", 
+         RowBox[{"2", ",", "7"}], "}"}], ",", 
+        RowBox[{"{", 
+         RowBox[{"2", ",", "8"}], "}"}], ",", 
+        RowBox[{"{", 
+         RowBox[{"1", ",", "8"}], "}"}], ",", 
+        RowBox[{"{", 
+         RowBox[{"1", ",", "7"}], "}"}]}], "}"}], "]"}]}], "}"}], ",", 
+   RowBox[{"{", 
+    RowBox[{
+     TemplateBox[<|"color" -> RGBColor[1., 0.85, 0.]|>,
+      "RGBColorSwatchTemplate"], ",", 
+     RowBox[{"AbsoluteThickness", "[", "3", "]"}], ",", 
+     RowBox[{"Line", "[", 
+      RowBox[{"{", 
+       RowBox[{
+        RowBox[{"{", 
+         RowBox[{"1", ",", "4"}], "}"}], ",", 
+        RowBox[{"{", 
+         RowBox[{"2", ",", "4"}], "}"}], ",", 
+        RowBox[{"{", 
+         RowBox[{"2", ",", "5"}], "}"}], ",", 
+        RowBox[{"{", 
+         RowBox[{"1", ",", "5"}], "}"}], ",", 
+        RowBox[{"{", 
+         RowBox[{"1", ",", "4"}], "}"}]}], "}"}], "]"}]}], "}"}]}], 
+  "}"}]], "Output",
+ CellChangeTimes->{3.9820657409927616`*^9},
+ CellLabel->"Out[78]=",ExpressionUUID->"a57f905a-345e-c448-b228-8ee78c8dd537"]
+}, Open  ]],
+
+Cell[CellGroupData[{
+
+Cell[BoxData[
+ RowBox[{"fig2", " ", "=", " ", 
+  RowBox[{"Graphics", "[", 
+   RowBox[{
+    RowBox[{"{", "\n", "  ", 
+     RowBox[{"(*", " ", 
+      RowBox[{"Grid", " ", "cells"}], " ", "*)"}], "\n", "  ", 
+     RowBox[{
+      RowBox[{"Flatten", "[", "fig2grid", "]"}], ",", "\n", "  ", 
+      RowBox[{"(*", " ", 
+       RowBox[{"Grid", " ", "lines"}], " ", "*)"}], "\n", "  ", 
+      RowBox[{"GrayLevel", "[", "0.95", "]"}], ",", " ", 
+      RowBox[{"AbsoluteThickness", "[", "1", "]"}], ",", "\n", "  ", 
+      RowBox[{"Table", "[", 
+       RowBox[{
+        RowBox[{"Line", "[", 
+         RowBox[{"{", 
+          RowBox[{
+           RowBox[{"{", 
+            RowBox[{"0", ",", " ", "y"}], "}"}], ",", " ", 
+           RowBox[{"{", 
+            RowBox[{"nCols", ",", " ", "y"}], "}"}]}], "}"}], "]"}], ",", " ", 
+        RowBox[{"{", 
+         RowBox[{"y", ",", " ", "0", ",", " ", "nCouplets"}], "}"}]}], "]"}], 
+      ",", "\n", "  ", 
+      RowBox[{"Table", "[", 
+       RowBox[{
+        RowBox[{"Line", "[", 
+         RowBox[{"{", 
+          RowBox[{
+           RowBox[{"{", 
+            RowBox[{"x", ",", " ", "0"}], "}"}], ",", " ", 
+           RowBox[{"{", 
+            RowBox[{"x", ",", " ", "nCouplets"}], "}"}]}], "}"}], "]"}], ",", 
+        " ", 
+        RowBox[{"{", 
+         RowBox[{"x", ",", " ", "0", ",", " ", "nCols"}], "}"}]}], "]"}], ",",
+       "\n", "  ", 
+      RowBox[{"(*", " ", "Labels", " ", "*)"}], "\n", "  ", "rowLabels", ",", 
+      "\n", "  ", "colLabels", ",", "\n", "  ", 
+      RowBox[{"(*", " ", 
+       RowBox[{"Conversion", " ", "highlights"}], " ", "*)"}], "\n", "  ", 
+      "rescueHighlights"}], "\n", "  ", "}"}], ",", "\n", "  ", 
+    RowBox[{"PlotLabel", " ", "->", " ", 
+     RowBox[{"Style", "[", "\n", "    ", 
+      RowBox[{
+       RowBox[{"\"\<Per-Couplet Results: candle-mi Recurrent Feedback (\>\"", 
+        " ", "<>", " ", "modelId", " ", "<>", " ", "\"\<)\>\""}], ",", "\n", 
+       "    ", "14", ",", " ", "Bold"}], "\n", "  ", "]"}]}], ",", "\n", "  ", 
+    RowBox[{"ImageSize", " ", "->", " ", "600"}], ",", "\n", "  ", 
+    RowBox[{"PlotRange", " ", "->", " ", 
+     RowBox[{"{", 
+      RowBox[{
+       RowBox[{"{", 
+        RowBox[{
+         RowBox[{"-", "2.5"}], ",", " ", 
+         RowBox[{"nCols", " ", "+", " ", "0.2"}]}], "}"}], ",", " ", 
+       RowBox[{"{", 
+        RowBox[{
+         RowBox[{"-", "0.5"}], ",", " ", 
+         RowBox[{"nCouplets", " ", "+", " ", "1"}]}], "}"}]}], "}"}]}], ",", 
+    "\n", "  ", 
+    RowBox[{"PlotRangePadding", " ", "->", " ", 
+     RowBox[{"{", 
+      RowBox[{
+       RowBox[{"{", 
+        RowBox[{"0", ",", " ", "0.2"}], "}"}], ",", " ", 
+       RowBox[{"{", 
+        RowBox[{"0.3", ",", " ", "0.5"}], "}"}]}], "}"}]}]}], "\n", 
+   "]"}]}]], "Input",
+ CellLabel->"In[79]:=",ExpressionUUID->"5b50a4af-0175-9f42-a871-d62ebb1e7372"],
+
+Cell[BoxData[
+ GraphicsBox[{{
+    {RGBColor[0.3, 0.75, 0.35], RectangleBox[{0, 14}], InsetBox[
+      StyleBox["\<\"light\"\>",
+       StripOnInput->False,
+       LineColor->GrayLevel[1],
+       FrontFaceColor->GrayLevel[1],
+       BackFaceColor->GrayLevel[1],
+       GraphicsColor->GrayLevel[1],
+       FontSize->10,
+       FontWeight->Bold,
+       FontColor->GrayLevel[1]], {0.5, 14.5}]}, 
+    {RGBColor[0.3, 0.75, 0.35], RectangleBox[{1, 14}], InsetBox[
+      StyleBox["\<\"light\"\>",
+       StripOnInput->False,
+       LineColor->GrayLevel[1],
+       FrontFaceColor->GrayLevel[1],
+       BackFaceColor->GrayLevel[1],
+       GraphicsColor->GrayLevel[1],
+       FontSize->10,
+       FontWeight->Bold,
+       FontColor->GrayLevel[1]], {1.5, 14.5}]}, 
+    {RGBColor[0.3, 0.75, 0.35], RectangleBox[{2, 14}], InsetBox[
+      StyleBox["\<\"light\"\>",
+       StripOnInput->False,
+       LineColor->GrayLevel[1],
+       FrontFaceColor->GrayLevel[1],
+       BackFaceColor->GrayLevel[1],
+       GraphicsColor->GrayLevel[1],
+       FontSize->10,
+       FontWeight->Bold,
+       FontColor->GrayLevel[1]], {2.5, 14.5}]}, 
+    {RGBColor[0.9, 0.3, 0.3], RectangleBox[{0, 13}], InsetBox[
+      StyleBox["\<\"talk\"\>",
+       StripOnInput->False,
+       LineColor->GrayLevel[1],
+       FrontFaceColor->GrayLevel[1],
+       BackFaceColor->GrayLevel[1],
+       GraphicsColor->GrayLevel[1],
+       FontSize->10,
+       FontWeight->Bold,
+       FontColor->GrayLevel[1]], {0.5, 13.5}]}, 
+    {RGBColor[0.9, 0.3, 0.3], RectangleBox[{1, 13}], InsetBox[
+      StyleBox["\<\"laugh\"\>",
+       StripOnInput->False,
+       LineColor->GrayLevel[1],
+       FrontFaceColor->GrayLevel[1],
+       BackFaceColor->GrayLevel[1],
+       GraphicsColor->GrayLevel[1],
+       FontSize->10,
+       FontWeight->Bold,
+       FontColor->GrayLevel[1]], {1.5, 13.5}]}, 
+    {RGBColor[0.9, 0.3, 0.3], RectangleBox[{2, 13}], InsetBox[
+      StyleBox["\<\"talk\"\>",
+       StripOnInput->False,
+       LineColor->GrayLevel[1],
+       FrontFaceColor->GrayLevel[1],
+       BackFaceColor->GrayLevel[1],
+       GraphicsColor->GrayLevel[1],
+       FontSize->10,
+       FontWeight->Bold,
+       FontColor->GrayLevel[1]], {2.5, 13.5}]}, 
+    {RGBColor[0.9, 0.3, 0.3], RectangleBox[{0, 12}], InsetBox[
+      StyleBox["\<\"flashes\"\>",
+       StripOnInput->False,
+       LineColor->GrayLevel[1],
+       FrontFaceColor->GrayLevel[1],
+       BackFaceColor->GrayLevel[1],
+       GraphicsColor->GrayLevel[1],
+       FontSize->10,
+       FontWeight->Bold,
+       FontColor->GrayLevel[1]], {0.5, 12.5}]}, 
+    {RGBColor[0.9, 0.3, 0.3], RectangleBox[{1, 12}], InsetBox[
+      StyleBox["\<\"flashes\"\>",
+       StripOnInput->False,
+       LineColor->GrayLevel[1],
+       FrontFaceColor->GrayLevel[1],
+       BackFaceColor->GrayLevel[1],
+       GraphicsColor->GrayLevel[1],
+       FontSize->10,
+       FontWeight->Bold,
+       FontColor->GrayLevel[1]], {1.5, 12.5}]}, 
+    {RGBColor[0.9, 0.3, 0.3], RectangleBox[{2, 12}], InsetBox[
+      StyleBox["\<\"flashes\"\>",
+       StripOnInput->False,
+       LineColor->GrayLevel[1],
+       FrontFaceColor->GrayLevel[1],
+       BackFaceColor->GrayLevel[1],
+       GraphicsColor->GrayLevel[1],
+       FontSize->10,
+       FontWeight->Bold,
+       FontColor->GrayLevel[1]], {2.5, 12.5}]}, 
+    {RGBColor[0.9, 0.3, 0.3], RectangleBox[{0, 11}], InsetBox[
+      StyleBox["\<\"falls\"\>",
+       StripOnInput->False,
+       LineColor->GrayLevel[1],
+       FrontFaceColor->GrayLevel[1],
+       BackFaceColor->GrayLevel[1],
+       GraphicsColor->GrayLevel[1],
+       FontSize->10,
+       FontWeight->Bold,
+       FontColor->GrayLevel[1]], {0.5, 11.5}]}, 
+    {RGBColor[0.9, 0.3, 0.3], RectangleBox[{1, 11}], InsetBox[
+      StyleBox["\<\"ground\"\>",
+       StripOnInput->False,
+       LineColor->GrayLevel[1],
+       FrontFaceColor->GrayLevel[1],
+       BackFaceColor->GrayLevel[1],
+       GraphicsColor->GrayLevel[1],
+       FontSize->10,
+       FontWeight->Bold,
+       FontColor->GrayLevel[1]], {1.5, 11.5}]}, 
+    {RGBColor[0.9, 0.3, 0.3], RectangleBox[{2, 11}], InsetBox[
+      StyleBox["\<\"ground\"\>",
+       StripOnInput->False,
+       LineColor->GrayLevel[1],
+       FrontFaceColor->GrayLevel[1],
+       BackFaceColor->GrayLevel[1],
+       GraphicsColor->GrayLevel[1],
+       FontSize->10,
+       FontWeight->Bold,
+       FontColor->GrayLevel[1]], {2.5, 11.5}]}, 
+    {RGBColor[0.3, 0.75, 0.35], RectangleBox[{0, 10}], InsetBox[
+      StyleBox["\<\"time\"\>",
+       StripOnInput->False,
+       LineColor->GrayLevel[1],
+       FrontFaceColor->GrayLevel[1],
+       BackFaceColor->GrayLevel[1],
+       GraphicsColor->GrayLevel[1],
+       FontSize->10,
+       FontWeight->Bold,
+       FontColor->GrayLevel[1]], {0.5, 10.5}]}, 
+    {RGBColor[0.3, 0.75, 0.35], RectangleBox[{1, 10}], InsetBox[
+      StyleBox["\<\"time\"\>",
+       StripOnInput->False,
+       LineColor->GrayLevel[1],
+       FrontFaceColor->GrayLevel[1],
+       BackFaceColor->GrayLevel[1],
+       GraphicsColor->GrayLevel[1],
+       FontSize->10,
+       FontWeight->Bold,
+       FontColor->GrayLevel[1]], {1.5, 10.5}]}, 
+    {RGBColor[0.3, 0.75, 0.35], RectangleBox[{2, 10}], InsetBox[
+      StyleBox["\<\"time\"\>",
+       StripOnInput->False,
+       LineColor->GrayLevel[1],
+       FrontFaceColor->GrayLevel[1],
+       BackFaceColor->GrayLevel[1],
+       GraphicsColor->GrayLevel[1],
+       FontSize->10,
+       FontWeight->Bold,
+       FontColor->GrayLevel[1]], {2.5, 10.5}]}, 
+    {RGBColor[0.3, 0.75, 0.35], RectangleBox[{0, 9}], InsetBox[
+      StyleBox["\<\"air\"\>",
+       StripOnInput->False,
+       LineColor->GrayLevel[1],
+       FrontFaceColor->GrayLevel[1],
+       BackFaceColor->GrayLevel[1],
+       GraphicsColor->GrayLevel[1],
+       FontSize->10,
+       FontWeight->Bold,
+       FontColor->GrayLevel[1]], {0.5, 9.5}]}, 
+    {RGBColor[0.3, 0.75, 0.35], RectangleBox[{1, 9}], InsetBox[
+      StyleBox["\<\"air\"\>",
+       StripOnInput->False,
+       LineColor->GrayLevel[1],
+       FrontFaceColor->GrayLevel[1],
+       BackFaceColor->GrayLevel[1],
+       GraphicsColor->GrayLevel[1],
+       FontSize->10,
+       FontWeight->Bold,
+       FontColor->GrayLevel[1]], {1.5, 9.5}]}, 
+    {RGBColor[0.3, 0.75, 0.35], RectangleBox[{2, 9}], InsetBox[
+      StyleBox["\<\"air\"\>",
+       StripOnInput->False,
+       LineColor->GrayLevel[1],
+       FrontFaceColor->GrayLevel[1],
+       BackFaceColor->GrayLevel[1],
+       GraphicsColor->GrayLevel[1],
+       FontSize->10,
+       FontWeight->Bold,
+       FontColor->GrayLevel[1]], {2.5, 9.5}]}, 
+    {RGBColor[0.9, 0.3, 0.3], RectangleBox[{0, 8}], InsetBox[
+      StyleBox["\<\"fair\"\>",
+       StripOnInput->False,
+       LineColor->GrayLevel[1],
+       FrontFaceColor->GrayLevel[1],
+       BackFaceColor->GrayLevel[1],
+       GraphicsColor->GrayLevel[1],
+       FontSize->10,
+       FontWeight->Bold,
+       FontColor->GrayLevel[1]], {0.5, 8.5}]}, 
+    {RGBColor[0.9, 0.3, 0.3], RectangleBox[{1, 8}], InsetBox[
+      StyleBox["\<\"fair\"\>",
+       StripOnInput->False,
+       LineColor->GrayLevel[1],
+       FrontFaceColor->GrayLevel[1],
+       BackFaceColor->GrayLevel[1],
+       GraphicsColor->GrayLevel[1],
+       FontSize->10,
+       FontWeight->Bold,
+       FontColor->GrayLevel[1]], {1.5, 8.5}]}, 
+    {RGBColor[0.9, 0.3, 0.3], RectangleBox[{2, 8}], InsetBox[
+      StyleBox["\<\"fair\"\>",
+       StripOnInput->False,
+       LineColor->GrayLevel[1],
+       FrontFaceColor->GrayLevel[1],
+       BackFaceColor->GrayLevel[1],
+       GraphicsColor->GrayLevel[1],
+       FontSize->10,
+       FontWeight->Bold,
+       FontColor->GrayLevel[1]], {2.5, 8.5}]}, 
+    {RGBColor[0.9, 0.3, 0.3], RectangleBox[{0, 7}], InsetBox[
+      StyleBox["\<\"embers\"\>",
+       StripOnInput->False,
+       LineColor->GrayLevel[1],
+       FrontFaceColor->GrayLevel[1],
+       BackFaceColor->GrayLevel[1],
+       GraphicsColor->GrayLevel[1],
+       FontSize->10,
+       FontWeight->Bold,
+       FontColor->GrayLevel[1]], {0.5, 7.5}]}, 
+    {RGBColor[0.3, 0.75, 0.35], RectangleBox[{1, 7}], InsetBox[
+      StyleBox["\<\"fire\"\>",
+       StripOnInput->False,
+       LineColor->GrayLevel[1],
+       FrontFaceColor->GrayLevel[1],
+       BackFaceColor->GrayLevel[1],
+       GraphicsColor->GrayLevel[1],
+       FontSize->10,
+       FontWeight->Bold,
+       FontColor->GrayLevel[1]], {1.5, 7.5}]}, 
+    {RGBColor[0.9, 0.3, 0.3], RectangleBox[{2, 7}], InsetBox[
+      StyleBox["\<\"embers\"\>",
+       StripOnInput->False,
+       LineColor->GrayLevel[1],
+       FrontFaceColor->GrayLevel[1],
+       BackFaceColor->GrayLevel[1],
+       GraphicsColor->GrayLevel[1],
+       FontSize->10,
+       FontWeight->Bold,
+       FontColor->GrayLevel[1]], {2.5, 7.5}]}, 
+    {RGBColor[0.3, 0.75, 0.35], RectangleBox[{0, 6}], InsetBox[
+      StyleBox["\<\"stone\"\>",
+       StripOnInput->False,
+       LineColor->GrayLevel[1],
+       FrontFaceColor->GrayLevel[1],
+       BackFaceColor->GrayLevel[1],
+       GraphicsColor->GrayLevel[1],
+       FontSize->10,
+       FontWeight->Bold,
+       FontColor->GrayLevel[1]], {0.5, 6.5}]}, 
+    {RGBColor[0.3, 0.75, 0.35], RectangleBox[{1, 6}], InsetBox[
+      StyleBox["\<\"stone\"\>",
+       StripOnInput->False,
+       LineColor->GrayLevel[1],
+       FrontFaceColor->GrayLevel[1],
+       BackFaceColor->GrayLevel[1],
+       GraphicsColor->GrayLevel[1],
+       FontSize->10,
+       FontWeight->Bold,
+       FontColor->GrayLevel[1]], {1.5, 6.5}]}, 
+    {RGBColor[0.3, 0.75, 0.35], RectangleBox[{2, 6}], InsetBox[
+      StyleBox["\<\"stone\"\>",
+       StripOnInput->False,
+       LineColor->GrayLevel[1],
+       FrontFaceColor->GrayLevel[1],
+       BackFaceColor->GrayLevel[1],
+       GraphicsColor->GrayLevel[1],
+       FontSize->10,
+       FontWeight->Bold,
+       FontColor->GrayLevel[1]], {2.5, 6.5}]}, 
+    {RGBColor[0.3, 0.75, 0.35], RectangleBox[{0, 5}], InsetBox[
+      StyleBox["\<\"dream\"\>",
+       StripOnInput->False,
+       LineColor->GrayLevel[1],
+       FrontFaceColor->GrayLevel[1],
+       BackFaceColor->GrayLevel[1],
+       GraphicsColor->GrayLevel[1],
+       FontSize->10,
+       FontWeight->Bold,
+       FontColor->GrayLevel[1]], {0.5, 5.5}]}, 
+    {RGBColor[0.3, 0.75, 0.35], RectangleBox[{1, 5}], InsetBox[
+      StyleBox["\<\"dream\"\>",
+       StripOnInput->False,
+       LineColor->GrayLevel[1],
+       FrontFaceColor->GrayLevel[1],
+       BackFaceColor->GrayLevel[1],
+       GraphicsColor->GrayLevel[1],
+       FontSize->10,
+       FontWeight->Bold,
+       FontColor->GrayLevel[1]], {1.5, 5.5}]}, 
+    {RGBColor[0.3, 0.75, 0.35], RectangleBox[{2, 5}], InsetBox[
+      StyleBox["\<\"dream\"\>",
+       StripOnInput->False,
+       LineColor->GrayLevel[1],
+       FrontFaceColor->GrayLevel[1],
+       BackFaceColor->GrayLevel[1],
+       GraphicsColor->GrayLevel[1],
+       FontSize->10,
+       FontWeight->Bold,
+       FontColor->GrayLevel[1]], {2.5, 5.5}]}, 
+    {RGBColor[0.9, 0.3, 0.3], RectangleBox[{0, 4}], InsetBox[
+      StyleBox["\<\"alone\"\>",
+       StripOnInput->False,
+       LineColor->GrayLevel[1],
+       FrontFaceColor->GrayLevel[1],
+       BackFaceColor->GrayLevel[1],
+       GraphicsColor->GrayLevel[1],
+       FontSize->10,
+       FontWeight->Bold,
+       FontColor->GrayLevel[1]], {0.5, 4.5}]}, 
+    {RGBColor[0.3, 0.75, 0.35], RectangleBox[{1, 4}], InsetBox[
+      StyleBox["\<\"strange\"\>",
+       StripOnInput->False,
+       LineColor->GrayLevel[1],
+       FrontFaceColor->GrayLevel[1],
+       BackFaceColor->GrayLevel[1],
+       GraphicsColor->GrayLevel[1],
+       FontSize->10,
+       FontWeight->Bold,
+       FontColor->GrayLevel[1]], {1.5, 4.5}]}, 
+    {RGBColor[0.9, 0.3, 0.3], RectangleBox[{2, 4}], InsetBox[
+      StyleBox["\<\"alone\"\>",
+       StripOnInput->False,
+       LineColor->GrayLevel[1],
+       FrontFaceColor->GrayLevel[1],
+       BackFaceColor->GrayLevel[1],
+       GraphicsColor->GrayLevel[1],
+       FontSize->10,
+       FontWeight->Bold,
+       FontColor->GrayLevel[1]], {2.5, 4.5}]}, 
+    {RGBColor[0.3, 0.75, 0.35], RectangleBox[{0, 3}], InsetBox[
+      StyleBox["\<\"love\"\>",
+       StripOnInput->False,
+       LineColor->GrayLevel[1],
+       FrontFaceColor->GrayLevel[1],
+       BackFaceColor->GrayLevel[1],
+       GraphicsColor->GrayLevel[1],
+       FontSize->10,
+       FontWeight->Bold,
+       FontColor->GrayLevel[1]], {0.5, 3.5}]}, 
+    {RGBColor[0.3, 0.75, 0.35], RectangleBox[{1, 3}], InsetBox[
+      StyleBox["\<\"love\"\>",
+       StripOnInput->False,
+       LineColor->GrayLevel[1],
+       FrontFaceColor->GrayLevel[1],
+       BackFaceColor->GrayLevel[1],
+       GraphicsColor->GrayLevel[1],
+       FontSize->10,
+       FontWeight->Bold,
+       FontColor->GrayLevel[1]], {1.5, 3.5}]}, 
+    {RGBColor[0.3, 0.75, 0.35], RectangleBox[{2, 3}], InsetBox[
+      StyleBox["\<\"love\"\>",
+       StripOnInput->False,
+       LineColor->GrayLevel[1],
+       FrontFaceColor->GrayLevel[1],
+       BackFaceColor->GrayLevel[1],
+       GraphicsColor->GrayLevel[1],
+       FontSize->10,
+       FontWeight->Bold,
+       FontColor->GrayLevel[1]], {2.5, 3.5}]}, 
+    {RGBColor[0.3, 0.75, 0.35], RectangleBox[{0, 2}], InsetBox[
+      StyleBox["\<\"truth\"\>",
+       StripOnInput->False,
+       LineColor->GrayLevel[1],
+       FrontFaceColor->GrayLevel[1],
+       BackFaceColor->GrayLevel[1],
+       GraphicsColor->GrayLevel[1],
+       FontSize->10,
+       FontWeight->Bold,
+       FontColor->GrayLevel[1]], {0.5, 2.5}]}, 
+    {RGBColor[0.3, 0.75, 0.35], RectangleBox[{1, 2}], InsetBox[
+      StyleBox["\<\"truth\"\>",
+       StripOnInput->False,
+       LineColor->GrayLevel[1],
+       FrontFaceColor->GrayLevel[1],
+       BackFaceColor->GrayLevel[1],
+       GraphicsColor->GrayLevel[1],
+       FontSize->10,
+       FontWeight->Bold,
+       FontColor->GrayLevel[1]], {1.5, 2.5}]}, 
+    {RGBColor[0.3, 0.75, 0.35], RectangleBox[{2, 2}], InsetBox[
+      StyleBox["\<\"truth\"\>",
+       StripOnInput->False,
+       LineColor->GrayLevel[1],
+       FrontFaceColor->GrayLevel[1],
+       BackFaceColor->GrayLevel[1],
+       GraphicsColor->GrayLevel[1],
+       FontSize->10,
+       FontWeight->Bold,
+       FontColor->GrayLevel[1]], {2.5, 2.5}]}, 
+    {RGBColor[0.3, 0.75, 0.35], RectangleBox[{0, 1}], InsetBox[
+      StyleBox["\<\"world\"\>",
+       StripOnInput->False,
+       LineColor->GrayLevel[1],
+       FrontFaceColor->GrayLevel[1],
+       BackFaceColor->GrayLevel[1],
+       GraphicsColor->GrayLevel[1],
+       FontSize->10,
+       FontWeight->Bold,
+       FontColor->GrayLevel[1]], {0.5, 1.5}]}, 
+    {RGBColor[0.3, 0.75, 0.35], RectangleBox[{1, 1}], InsetBox[
+      StyleBox["\<\"world\"\>",
+       StripOnInput->False,
+       LineColor->GrayLevel[1],
+       FrontFaceColor->GrayLevel[1],
+       BackFaceColor->GrayLevel[1],
+       GraphicsColor->GrayLevel[1],
+       FontSize->10,
+       FontWeight->Bold,
+       FontColor->GrayLevel[1]], {1.5, 1.5}]}, 
+    {RGBColor[0.3, 0.75, 0.35], RectangleBox[{2, 1}], InsetBox[
+      StyleBox["\<\"world\"\>",
+       StripOnInput->False,
+       LineColor->GrayLevel[1],
+       FrontFaceColor->GrayLevel[1],
+       BackFaceColor->GrayLevel[1],
+       GraphicsColor->GrayLevel[1],
+       FontSize->10,
+       FontWeight->Bold,
+       FontColor->GrayLevel[1]], {2.5, 1.5}]}, 
+    {RGBColor[0.3, 0.75, 0.35], RectangleBox[{0, 0}], InsetBox[
+      StyleBox["\<\"earth\"\>",
+       StripOnInput->False,
+       LineColor->GrayLevel[1],
+       FrontFaceColor->GrayLevel[1],
+       BackFaceColor->GrayLevel[1],
+       GraphicsColor->GrayLevel[1],
+       FontSize->10,
+       FontWeight->Bold,
+       FontColor->GrayLevel[1]], {0.5, 0.5}]}, 
+    {RGBColor[0.3, 0.75, 0.35], RectangleBox[{1, 0}], InsetBox[
+      StyleBox["\<\"earth\"\>",
+       StripOnInput->False,
+       LineColor->GrayLevel[1],
+       FrontFaceColor->GrayLevel[1],
+       BackFaceColor->GrayLevel[1],
+       GraphicsColor->GrayLevel[1],
+       FontSize->10,
+       FontWeight->Bold,
+       FontColor->GrayLevel[1]], {1.5, 0.5}]}, 
+    {RGBColor[0.3, 0.75, 0.35], RectangleBox[{2, 0}], InsetBox[
+      StyleBox["\<\"earth\"\>",
+       StripOnInput->False,
+       LineColor->GrayLevel[1],
+       FrontFaceColor->GrayLevel[1],
+       BackFaceColor->GrayLevel[1],
+       GraphicsColor->GrayLevel[1],
+       FontSize->10,
+       FontWeight->Bold,
+       FontColor->GrayLevel[1]], {2.5, 0.5}]}}, 
+   {GrayLevel[0.95], AbsoluteThickness[
+    1], {LineBox[{{0, 0}, {3, 0}}], LineBox[{{0, 1}, {3, 1}}], 
+     LineBox[{{0, 2}, {3, 2}}], LineBox[{{0, 3}, {3, 3}}], 
+     LineBox[{{0, 4}, {3, 4}}], LineBox[{{0, 5}, {3, 5}}], 
+     LineBox[{{0, 6}, {3, 6}}], LineBox[{{0, 7}, {3, 7}}], 
+     LineBox[{{0, 8}, {3, 8}}], LineBox[{{0, 9}, {3, 9}}], 
+     LineBox[{{0, 10}, {3, 10}}], LineBox[{{0, 11}, {3, 11}}], 
+     LineBox[{{0, 12}, {3, 12}}], LineBox[{{0, 13}, {3, 13}}], 
+     LineBox[{{0, 14}, {3, 14}}], LineBox[{{0, 15}, {3, 15}}]}, {
+     LineBox[{{0, 0}, {0, 15}}], LineBox[{{1, 0}, {1, 15}}], 
+     LineBox[{{2, 0}, {2, 15}}], LineBox[{{3, 0}, {3, 15}}]}, {InsetBox[
+      StyleBox["\<\"1. light\"\>",
+       StripOnInput->False,
+       LineColor->GrayLevel[1],
+       FrontFaceColor->GrayLevel[1],
+       BackFaceColor->GrayLevel[1],
+       GraphicsColor->GrayLevel[1],
+       FontSize->11,
+       FontWeight->Plain,
+       FontSlant->Plain,
+       FontVariations->{"StrikeThrough"->False,
+       "Underline"->False},
+       FontColor->GrayLevel[1]], {-0.15, 14.5}, NCache[
+      ImageScaled[{1, Rational[1, 2]}], ImageScaled[{1, 0.5}]]], InsetBox[
+      StyleBox["\<\"2. play\"\>",
+       StripOnInput->False,
+       LineColor->RGBColor[1., 0.4, 0.4],
+       FrontFaceColor->RGBColor[1., 0.4, 0.4],
+       BackFaceColor->RGBColor[1., 0.4, 0.4],
+       GraphicsColor->RGBColor[1., 0.4, 0.4],
+       FontSize->11,
+       FontWeight->Bold,
+       FontColor->RGBColor[1., 0.4, 0.4]], {-0.15, 13.5}, NCache[
+      ImageScaled[{1, Rational[1, 2]}], ImageScaled[{1, 0.5}]]], InsetBox[
+      StyleBox["\<\"3. sound\"\>",
+       StripOnInput->False,
+       LineColor->RGBColor[1., 0.4, 0.4],
+       FrontFaceColor->RGBColor[1., 0.4, 0.4],
+       BackFaceColor->RGBColor[1., 0.4, 0.4],
+       GraphicsColor->RGBColor[1., 0.4, 0.4],
+       FontSize->11,
+       FontWeight->Bold,
+       FontColor->RGBColor[1., 0.4, 0.4]], {-0.15, 12.5}, NCache[
+      ImageScaled[{1, Rational[1, 2]}], ImageScaled[{1, 0.5}]]], InsetBox[
+      StyleBox["\<\"4. rain\"\>",
+       StripOnInput->False,
+       LineColor->RGBColor[1., 0.4, 0.4],
+       FrontFaceColor->RGBColor[1., 0.4, 0.4],
+       BackFaceColor->RGBColor[1., 0.4, 0.4],
+       GraphicsColor->RGBColor[1., 0.4, 0.4],
+       FontSize->11,
+       FontWeight->Bold,
+       FontColor->RGBColor[1., 0.4, 0.4]], {-0.15, 11.5}, NCache[
+      ImageScaled[{1, Rational[1, 2]}], ImageScaled[{1, 0.5}]]], InsetBox[
+      StyleBox["\<\"5. time\"\>",
+       StripOnInput->False,
+       LineColor->GrayLevel[1],
+       FrontFaceColor->GrayLevel[1],
+       BackFaceColor->GrayLevel[1],
+       GraphicsColor->GrayLevel[1],
+       FontSize->11,
+       FontWeight->Plain,
+       FontSlant->Plain,
+       FontVariations->{"StrikeThrough"->False,
+       "Underline"->False},
+       FontColor->GrayLevel[1]], {-0.15, 10.5}, NCache[
+      ImageScaled[{1, Rational[1, 2]}], ImageScaled[{1, 0.5}]]], InsetBox[
+      StyleBox["\<\"6. air\"\>",
+       StripOnInput->False,
+       LineColor->GrayLevel[1],
+       FrontFaceColor->GrayLevel[1],
+       BackFaceColor->GrayLevel[1],
+       GraphicsColor->GrayLevel[1],
+       FontSize->11,
+       FontWeight->Plain,
+       FontSlant->Plain,
+       FontVariations->{"StrikeThrough"->False,
+       "Underline"->False},
+       FontColor->GrayLevel[1]], {-0.15, 9.5}, NCache[
+      ImageScaled[{1, Rational[1, 2]}], ImageScaled[{1, 0.5}]]], InsetBox[
+      StyleBox["\<\"7. gold\"\>",
+       StripOnInput->False,
+       LineColor->RGBColor[1., 0.4, 0.4],
+       FrontFaceColor->RGBColor[1., 0.4, 0.4],
+       BackFaceColor->RGBColor[1., 0.4, 0.4],
+       GraphicsColor->RGBColor[1., 0.4, 0.4],
+       FontSize->11,
+       FontWeight->Bold,
+       FontColor->RGBColor[1., 0.4, 0.4]], {-0.15, 8.5}, NCache[
+      ImageScaled[{1, Rational[1, 2]}], ImageScaled[{1, 0.5}]]], InsetBox[
+      StyleBox["\<\"8. fire\"\>",
+       StripOnInput->False,
+       LineColor->GrayLevel[1],
+       FrontFaceColor->GrayLevel[1],
+       BackFaceColor->GrayLevel[1],
+       GraphicsColor->GrayLevel[1],
+       FontSize->11,
+       FontWeight->Plain,
+       FontSlant->Plain,
+       FontVariations->{"StrikeThrough"->False,
+       "Underline"->False},
+       FontColor->GrayLevel[1]], {-0.15, 7.5}, NCache[
+      ImageScaled[{1, Rational[1, 2]}], ImageScaled[{1, 0.5}]]], InsetBox[
+      StyleBox["\<\"9. stone\"\>",
+       StripOnInput->False,
+       LineColor->GrayLevel[1],
+       FrontFaceColor->GrayLevel[1],
+       BackFaceColor->GrayLevel[1],
+       GraphicsColor->GrayLevel[1],
+       FontSize->11,
+       FontWeight->Plain,
+       FontSlant->Plain,
+       FontVariations->{"StrikeThrough"->False,
+       "Underline"->False},
+       FontColor->GrayLevel[1]], {-0.15, 6.5}, NCache[
+      ImageScaled[{1, Rational[1, 2]}], ImageScaled[{1, 0.5}]]], InsetBox[
+      StyleBox["\<\"10. dream\"\>",
+       StripOnInput->False,
+       LineColor->GrayLevel[1],
+       FrontFaceColor->GrayLevel[1],
+       BackFaceColor->GrayLevel[1],
+       GraphicsColor->GrayLevel[1],
+       FontSize->11,
+       FontWeight->Plain,
+       FontSlant->Plain,
+       FontVariations->{"StrikeThrough"->False,
+       "Underline"->False},
+       FontColor->GrayLevel[1]], {-0.15, 5.5}, NCache[
+      ImageScaled[{1, Rational[1, 2]}], ImageScaled[{1, 0.5}]]], InsetBox[
+      StyleBox["\<\"11. strange\"\>",
+       StripOnInput->False,
+       LineColor->GrayLevel[1],
+       FrontFaceColor->GrayLevel[1],
+       BackFaceColor->GrayLevel[1],
+       GraphicsColor->GrayLevel[1],
+       FontSize->11,
+       FontWeight->Plain,
+       FontSlant->Plain,
+       FontVariations->{"StrikeThrough"->False,
+       "Underline"->False},
+       FontColor->GrayLevel[1]], {-0.15, 4.5}, NCache[
+      ImageScaled[{1, Rational[1, 2]}], ImageScaled[{1, 0.5}]]], InsetBox[
+      StyleBox["\<\"12. love\"\>",
+       StripOnInput->False,
+       LineColor->GrayLevel[1],
+       FrontFaceColor->GrayLevel[1],
+       BackFaceColor->GrayLevel[1],
+       GraphicsColor->GrayLevel[1],
+       FontSize->11,
+       FontWeight->Plain,
+       FontSlant->Plain,
+       FontVariations->{"StrikeThrough"->False,
+       "Underline"->False},
+       FontColor->GrayLevel[1]], {-0.15, 3.5}, NCache[
+      ImageScaled[{1, Rational[1, 2]}], ImageScaled[{1, 0.5}]]], InsetBox[
+      StyleBox["\<\"13. truth\"\>",
+       StripOnInput->False,
+       LineColor->GrayLevel[1],
+       FrontFaceColor->GrayLevel[1],
+       BackFaceColor->GrayLevel[1],
+       GraphicsColor->GrayLevel[1],
+       FontSize->11,
+       FontWeight->Plain,
+       FontSlant->Plain,
+       FontVariations->{"StrikeThrough"->False,
+       "Underline"->False},
+       FontColor->GrayLevel[1]], {-0.15, 2.5}, NCache[
+      ImageScaled[{1, Rational[1, 2]}], ImageScaled[{1, 0.5}]]], InsetBox[
+      StyleBox["\<\"14. world\"\>",
+       StripOnInput->False,
+       LineColor->GrayLevel[1],
+       FrontFaceColor->GrayLevel[1],
+       BackFaceColor->GrayLevel[1],
+       GraphicsColor->GrayLevel[1],
+       FontSize->11,
+       FontWeight->Plain,
+       FontSlant->Plain,
+       FontVariations->{"StrikeThrough"->False,
+       "Underline"->False},
+       FontColor->GrayLevel[1]], {-0.15, 1.5}, NCache[
+      ImageScaled[{1, Rational[1, 2]}], ImageScaled[{1, 0.5}]]], InsetBox[
+      StyleBox["\<\"15. earth\"\>",
+       StripOnInput->False,
+       LineColor->GrayLevel[1],
+       FrontFaceColor->GrayLevel[1],
+       BackFaceColor->GrayLevel[1],
+       GraphicsColor->GrayLevel[1],
+       FontSize->11,
+       FontWeight->Plain,
+       FontSlant->Plain,
+       FontVariations->{"StrikeThrough"->False,
+       "Underline"->False},
+       FontColor->GrayLevel[1]], {-0.15, 0.5}, NCache[
+      ImageScaled[{1, Rational[1, 2]}], ImageScaled[{1, 0.5}]]]}, {InsetBox[
+      StyleBox["\<\"Baseline\"\>",
+       StripOnInput->False,
+       LineColor->GrayLevel[1],
+       FrontFaceColor->GrayLevel[1],
+       BackFaceColor->GrayLevel[1],
+       GraphicsColor->GrayLevel[1],
+       FontSize->10,
+       FontWeight->Bold,
+       FontColor->GrayLevel[1]], {0.5, 15.25}, NCache[
+      ImageScaled[{Rational[1, 2], 0}], ImageScaled[{0.5, 0}]]], InsetBox[
+      StyleBox["\<\"Prefill\\nL8\[Dash]15, s=2.\"\>",
+       StripOnInput->False,
+       LineColor->GrayLevel[1],
+       FrontFaceColor->GrayLevel[1],
+       BackFaceColor->GrayLevel[1],
+       GraphicsColor->GrayLevel[1],
+       FontSize->10,
+       FontWeight->Bold,
+       FontColor->GrayLevel[1]], {1.5, 15.25}, NCache[
+      ImageScaled[{Rational[1, 2], 0}], ImageScaled[{0.5, 0}]]], InsetBox[
+      StyleBox["\<\"Sustained\\nL14\[Dash]15, s=1.\"\>",
+       StripOnInput->False,
+       LineColor->GrayLevel[1],
+       FrontFaceColor->GrayLevel[1],
+       BackFaceColor->GrayLevel[1],
+       GraphicsColor->GrayLevel[1],
+       FontSize->10,
+       FontWeight->Bold,
+       FontColor->GrayLevel[1]], {2.5, 15.25}, NCache[
+      ImageScaled[{Rational[1, 2], 0}], ImageScaled[{0.5, 0}]]]}, {
+     {RGBColor[1., 0.85, 0.], AbsoluteThickness[3], 
+      LineBox[{{1, 7}, {2, 7}, {2, 8}, {1, 8}, {1, 7}}]}, 
+     {RGBColor[1., 0.85, 0.], AbsoluteThickness[3], 
+      LineBox[{{1, 4}, {2, 4}, {2, 5}, {1, 5}, {1, 4}}]}}}},
+  ImageSize->600,
+  PlotLabel->FormBox[
+    StyleBox[
+    "\"Per-Couplet Results: candle-mi Recurrent Feedback \
+(meta-llama/Llama-3.2-1B)\"", 14, Bold, StripOnInput -> False], 
+    TraditionalForm],
+  PlotRange->{{-2.5, 3.2}, {-0.5, 16}},
+  PlotRangePadding->{{0, 0.2}, {0.3, 0.5}}]], "Output",
+ CellChangeTimes->{
+  3.9820652539128895`*^9, 3.9820652862663307`*^9, {3.982065533254225*^9, 
+   3.9820655613002167`*^9}, 3.982065744425873*^9},
+ CellLabel->"Out[79]=",ExpressionUUID->"6ce23b63-aa26-bb41-b4a4-1033be0961fd"]
+}, Open  ]],
+
+Cell[BoxData[
+ RowBox[{"Export", "[", "\n", "  ", 
+  RowBox[{
+   RowBox[{"FileNameJoin", "[", 
+    RowBox[{"{", 
+     RowBox[{
+      RowBox[{"NotebookDirectory", "[", "]"}], ",", 
+      " ", "\"\<recurrent_feedback_couplet_grid.png\>\""}], "}"}], "]"}], ",",
+    "\n", "  ", "fig2", ",", " ", 
+   RowBox[{"ImageResolution", " ", "->", " ", "300"}]}], "]"}]], "Input",
+ CellChangeTimes->{{3.982065242668516*^9, 3.982065251492029*^9}, {
+   3.982065538102724*^9, 3.982065546239191*^9}, 
+   3.982065749405321*^9},ExpressionUUID->"a6530c4c-931d-d844-9c41-\
+ca6b2fbaf0e0"],
+
+Cell[CellGroupData[{
+
+Cell[BoxData[
+ RowBox[{
+  RowBox[{"(*", " ", 
+   RowBox[{
+   "===", "===", "===", "===", "===", "===", "===", "===", "===", "===", "===",
+     "===", "===", "===", "===", "===", "===", "===", "===", "==="}], " ", 
+   "*)"}], "\n", 
+  RowBox[{
+  "(*", " ", "Summary", 
+   "                                                       ", "*)"}], "\n", 
+  RowBox[{"(*", " ", 
+   RowBox[{
+   "===", "===", "===", "===", "===", "===", "===", "===", "===", "===", "===",
+     "===", "===", "===", "===", "===", "===", "===", "===", "==="}], " ", 
+   "*)"}], "\n", "\n", 
+  RowBox[{
+   RowBox[{
+    RowBox[{"Print", "[", "\"\<\\n=== Summary ===\>\"", "]"}], ";"}], "\n", 
+   RowBox[{
+    RowBox[{"Print", "[", 
+     RowBox[{"\"\<Model:          \>\"", ",", " ", "modelId"}], "]"}], ";"}], 
+   "\n", 
+   RowBox[{
+    RowBox[{"Print", "[", 
+     RowBox[{"\"\<Conditions:     \>\"", ",", " ", "nCols"}], "]"}], ";"}], "\n", 
+   RowBox[{
+    RowBox[{"Print", "[", 
+     RowBox[{"\"\<Couplets:       \>\"", ",", " ", "nCouplets"}], "]"}], 
+    ";"}], "\n", 
+   RowBox[{
+    RowBox[{"Print", "[", 
+     RowBox[{"\"\<Baseline:       \>\"", ",", " ", "baselineRhymes", ",", 
+      " ", "\"\</\>\"", ",", " ", "nCouplets"}], "]"}], ";"}], "\n", 
+   RowBox[{
+    RowBox[{"Print", "[", 
+     RowBox[{"\"\<Best recurrent: \>\"", ",", " ", 
+      RowBox[{"Max", "[", "conditionRhymes", "]"}], ",", " ", "\"\</\>\"", ",",
+       " ", "nCouplets"}], "]"}], ";"}], "\n", 
+   RowBox[{
+    RowBox[{"If", "[", 
+     RowBox[{
+      RowBox[{
+       RowBox[{"Length", "[", "rescuedCells", "]"}], " ", ">", " ", "0"}], ",",
+       "\n", "  ", 
+      RowBox[{"Print", "[", 
+       RowBox[{"\"\<Rescued cells:  \>\"", ",", " ", 
+        RowBox[{"Length", "[", "rescuedCells", "]"}]}], "]"}], ",", "\n", 
+      "  ", 
+      RowBox[{"Print", "[", "\"\<Rescued cells:  0\>\"", "]"}]}], "\n", "]"}],
+     ";"}], "\n", 
+   RowBox[{
+    RowBox[{"If", "[", 
+     RowBox[{
+      RowBox[{
+       RowBox[{"Length", "[", "resistantCoupletIds", "]"}], " ", ">", " ", 
+       "0"}], ",", "\n", "  ", 
+      RowBox[{"Print", "[", 
+       RowBox[{"\"\<Resistant failures: \>\"", ",", " ", 
+        "resistantCoupletIds"}], "]"}]}], "\n", "]"}], ";"}]}]}]], "Input",
+ CellLabel->"In[64]:=",ExpressionUUID->"25d918eb-251a-c048-aaac-6ff70f4b75a6"],
+
+Cell[CellGroupData[{
+
+Cell[BoxData["\<\"\\n=== Summary ===\"\>"], "Print",
+ CellChangeTimes->{3.9820655976773624`*^9},
+ CellLabel->
+  "Lors de l\[CloseCurlyQuote]\[EAcute]valuation de \
+In[64]:=",ExpressionUUID->"8bf2ea30-7d88-2d4b-addc-e734fa5ffecb"],
+
+Cell[BoxData[
+ InterpretationBox[
+  RowBox[{"\<\"Model:          \"\>", 
+   "\[InvisibleSpace]", "\<\"meta-llama/Llama-3.2-1B\"\>"}],
+  SequenceForm["Model:          ", "meta-llama/Llama-3.2-1B"],
+  Editable->False]], "Print",
+ CellChangeTimes->{3.9820655976793633`*^9},
+ CellLabel->
+  "Lors de l\[CloseCurlyQuote]\[EAcute]valuation de \
+In[64]:=",ExpressionUUID->"939e0d45-313d-224f-9d51-32ab73806ab3"],
+
+Cell[BoxData[
+ InterpretationBox[
+  RowBox[{"\<\"Conditions:     \"\>", "\[InvisibleSpace]", "3"}],
+  SequenceForm["Conditions:     ", 3],
+  Editable->False]], "Print",
+ CellChangeTimes->{3.982065597683363*^9},
+ CellLabel->
+  "Lors de l\[CloseCurlyQuote]\[EAcute]valuation de \
+In[64]:=",ExpressionUUID->"26860c34-20bc-7946-a4e1-fb91669b08ae"],
+
+Cell[BoxData[
+ InterpretationBox[
+  RowBox[{"\<\"Couplets:       \"\>", "\[InvisibleSpace]", "15"}],
+  SequenceForm["Couplets:       ", 15],
+  Editable->False]], "Print",
+ CellChangeTimes->{3.9820655976843624`*^9},
+ CellLabel->
+  "Lors de l\[CloseCurlyQuote]\[EAcute]valuation de \
+In[64]:=",ExpressionUUID->"b49ba5d9-d2ee-fa40-ad0b-48511d3de543"],
+
+Cell[BoxData[
+ InterpretationBox[
+  RowBox[{"\<\"Baseline:       \"\>", "\[InvisibleSpace]", "9", 
+   "\[InvisibleSpace]", "\<\"/\"\>", "\[InvisibleSpace]", "15"}],
+  SequenceForm["Baseline:       ", 9, "/", 15],
+  Editable->False]], "Print",
+ CellChangeTimes->{3.982065597685364*^9},
+ CellLabel->
+  "Lors de l\[CloseCurlyQuote]\[EAcute]valuation de \
+In[64]:=",ExpressionUUID->"fef9b560-fb0c-0b47-9a7b-b61c2f7cd799"],
+
+Cell[BoxData[
+ InterpretationBox[
+  RowBox[{"\<\"Best recurrent: \"\>", "\[InvisibleSpace]", "11", 
+   "\[InvisibleSpace]", "\<\"/\"\>", "\[InvisibleSpace]", "15"}],
+  SequenceForm["Best recurrent: ", 11, "/", 15],
+  Editable->False]], "Print",
+ CellChangeTimes->{3.982065597686363*^9},
+ CellLabel->
+  "Lors de l\[CloseCurlyQuote]\[EAcute]valuation de \
+In[64]:=",ExpressionUUID->"0837aaa1-c4dc-2a42-9675-10542bbd8e88"],
+
+Cell[BoxData[
+ InterpretationBox[
+  RowBox[{"\<\"Rescued cells:  \"\>", "\[InvisibleSpace]", "2"}],
+  SequenceForm["Rescued cells:  ", 2],
+  Editable->False]], "Print",
+ CellChangeTimes->{3.9820655976873665`*^9},
+ CellLabel->
+  "Lors de l\[CloseCurlyQuote]\[EAcute]valuation de \
+In[64]:=",ExpressionUUID->"c2a66ee6-6910-194c-bde6-6d4bfe883067"],
+
+Cell[BoxData[
+ InterpretationBox[
+  RowBox[{"\<\"Resistant failures: \"\>", "\[InvisibleSpace]", 
+   RowBox[{"{", 
+    RowBox[{"2", ",", "3", ",", "4", ",", "7"}], "}"}]}],
+  SequenceForm["Resistant failures: ", {2, 3, 4, 7}],
+  Editable->False]], "Print",
+ CellChangeTimes->{3.9820655976888695`*^9},
+ CellLabel->
+  "Lors de l\[CloseCurlyQuote]\[EAcute]valuation de \
+In[64]:=",ExpressionUUID->"ddb7b747-9dec-5f44-862a-924d1ae7e0e6"]
+}, Open  ]]
+}, Open  ]]
+}, Open  ]]
+}, Open  ]]
 },
 WindowSize->{1909, 1001},
 WindowMargins->{{0, Automatic}, {Automatic, 0}},
@@ -5996,61 +8526,130 @@ CellTagsIndex->{}
 (*NotebookFileOutline
 Notebook[{
 Cell[CellGroupData[{
-Cell[576, 22, 213, 4, 66, "Section",ExpressionUUID->"a3e10ddd-dba1-414d-9c4c-4e9ac1ce6c3a"],
-Cell[792, 28, 2364, 59, 256, "Input",ExpressionUUID->"410aa641-fcea-534e-a426-2f3af373efbb"],
-Cell[3159, 89, 752, 20, 85, "Input",ExpressionUUID->"1ab63ec1-7559-f949-96d3-e3b8866406ca"],
-Cell[3914, 111, 1405, 34, 161, "Input",ExpressionUUID->"7b348bec-1f90-7d43-93dc-8f8d88161952"]
+Cell[576, 22, 172, 3, 66, "Section",ExpressionUUID->"f7c3ed45-4f57-e34a-839f-85f651ced5cb"],
+Cell[CellGroupData[{
+Cell[773, 29, 216, 4, 53, "Subsection",ExpressionUUID->"a3e10ddd-dba1-414d-9c4c-4e9ac1ce6c3a"],
+Cell[992, 35, 2364, 59, 256, "Input",ExpressionUUID->"410aa641-fcea-534e-a426-2f3af373efbb"],
+Cell[3359, 96, 752, 20, 85, "Input",ExpressionUUID->"1ab63ec1-7559-f949-96d3-e3b8866406ca"],
+Cell[4114, 118, 1405, 34, 161, "Input",ExpressionUUID->"7b348bec-1f90-7d43-93dc-8f8d88161952"]
 }, Open  ]],
 Cell[CellGroupData[{
-Cell[5356, 150, 174, 3, 66, "Section",ExpressionUUID->"05689a35-7a01-2c44-b603-f843b994dc3b"],
+Cell[5556, 157, 177, 3, 53, "Subsection",ExpressionUUID->"05689a35-7a01-2c44-b603-f843b994dc3b"],
 Cell[CellGroupData[{
-Cell[5555, 157, 2542, 64, 370, "Input",ExpressionUUID->"15af9277-bd9b-c945-b0eb-59e96814379c"],
-Cell[8100, 223, 205, 4, 32, "Output",ExpressionUUID->"94dc27c0-ff38-1d45-8a13-f17fb0e6cf68"]
+Cell[5758, 164, 2542, 64, 370, "Input",ExpressionUUID->"15af9277-bd9b-c945-b0eb-59e96814379c"],
+Cell[8303, 230, 205, 4, 32, "Output",ExpressionUUID->"94dc27c0-ff38-1d45-8a13-f17fb0e6cf68"]
 }, Open  ]],
 Cell[CellGroupData[{
-Cell[8342, 232, 5233, 121, 237, "Input",ExpressionUUID->"889455c4-72f5-fe4e-abe2-67ab0a392190"],
-Cell[13578, 355, 48047, 1221, 417, "Output",ExpressionUUID->"cd5d914f-97f7-704a-8ea1-726031f4db80"]
+Cell[8545, 239, 5233, 121, 237, "Input",ExpressionUUID->"889455c4-72f5-fe4e-abe2-67ab0a392190"],
+Cell[13781, 362, 48047, 1221, 417, "Output",ExpressionUUID->"cd5d914f-97f7-704a-8ea1-726031f4db80"]
 }, Open  ]],
-Cell[61640, 1579, 238, 5, 28, "Input",ExpressionUUID->"1dc7ed7e-9de1-2f4a-b810-abb3abdf080a"],
+Cell[61843, 1586, 238, 5, 28, "Input",ExpressionUUID->"1dc7ed7e-9de1-2f4a-b810-abb3abdf080a"],
 Cell[CellGroupData[{
-Cell[61903, 1588, 4650, 109, 267, "Input",ExpressionUUID->"54d11922-3480-5846-a7f6-fca02501715a"],
-Cell[66556, 1699, 50069, 1290, 412, "Output",ExpressionUUID->"3401bfd9-362e-b644-b011-0df92a5533bb"]
-}, Open  ]],
-Cell[CellGroupData[{
-Cell[116662, 2994, 189, 3, 43, "Subsubsection",ExpressionUUID->"b826bc1c-5a9d-0345-908d-9da6a6fc2fc9"],
-Cell[CellGroupData[{
-Cell[116876, 3001, 575, 13, 104, "Input",ExpressionUUID->"0c547c18-c896-f441-9ac9-df1d9ab6053a"],
-Cell[117454, 3016, 284, 5, 32, "Output",ExpressionUUID->"e3b24b27-af2f-4346-ba04-0c69462f0e47"]
+Cell[62106, 1595, 4650, 109, 267, "Input",ExpressionUUID->"54d11922-3480-5846-a7f6-fca02501715a"],
+Cell[66759, 1706, 50069, 1290, 412, "Output",ExpressionUUID->"3401bfd9-362e-b644-b011-0df92a5533bb"]
 }, Open  ]],
 Cell[CellGroupData[{
-Cell[117775, 3026, 490, 12, 104, "Input",ExpressionUUID->"d21a8962-3f4a-ee4b-aba0-11d101bafb4a"],
-Cell[118268, 3040, 279, 5, 32, "Output",ExpressionUUID->"46a16a4a-1806-264e-88b2-d8536cf40b48"]
+Cell[116865, 3001, 189, 3, 43, "Subsubsection",ExpressionUUID->"b826bc1c-5a9d-0345-908d-9da6a6fc2fc9"],
+Cell[CellGroupData[{
+Cell[117079, 3008, 575, 13, 104, "Input",ExpressionUUID->"0c547c18-c896-f441-9ac9-df1d9ab6053a"],
+Cell[117657, 3023, 284, 5, 32, "Output",ExpressionUUID->"e3b24b27-af2f-4346-ba04-0c69462f0e47"]
+}, Open  ]],
+Cell[CellGroupData[{
+Cell[117978, 3033, 490, 12, 104, "Input",ExpressionUUID->"d21a8962-3f4a-ee4b-aba0-11d101bafb4a"],
+Cell[118471, 3047, 279, 5, 32, "Output",ExpressionUUID->"46a16a4a-1806-264e-88b2-d8536cf40b48"]
 }, Open  ]]
 }, Open  ]]
 }, Open  ]],
 Cell[CellGroupData[{
-Cell[118608, 3052, 200, 4, 66, "Section",ExpressionUUID->"13cc4a95-4326-fc41-a2fa-d69edf7f4d54"],
+Cell[118811, 3059, 203, 4, 53, "Subsection",ExpressionUUID->"13cc4a95-4326-fc41-a2fa-d69edf7f4d54"],
 Cell[CellGroupData[{
-Cell[118833, 3060, 2469, 61, 370, "Input",ExpressionUUID->"96364d78-3762-5e44-9862-f1712d073b0b"],
-Cell[121305, 3123, 180, 3, 32, "Output",ExpressionUUID->"8a6aeeb9-a58a-3d4a-9e95-75aeaa43048d"]
+Cell[119039, 3067, 2469, 61, 370, "Input",ExpressionUUID->"96364d78-3762-5e44-9862-f1712d073b0b"],
+Cell[121511, 3130, 180, 3, 32, "Output",ExpressionUUID->"8a6aeeb9-a58a-3d4a-9e95-75aeaa43048d"]
 }, Open  ]],
 Cell[CellGroupData[{
-Cell[121522, 3131, 4432, 106, 218, "Input",ExpressionUUID->"20fdf36f-963e-5a45-8d92-020fe503f3c8"],
-Cell[125957, 3239, 48666, 1248, 395, "Output",ExpressionUUID->"d8bedd2f-62d9-6b47-8f47-be4bd603fdf1"]
+Cell[121728, 3138, 4432, 106, 218, "Input",ExpressionUUID->"20fdf36f-963e-5a45-8d92-020fe503f3c8"],
+Cell[126163, 3246, 48666, 1248, 395, "Output",ExpressionUUID->"d8bedd2f-62d9-6b47-8f47-be4bd603fdf1"]
 }, Open  ]],
 Cell[CellGroupData[{
-Cell[174660, 4492, 4433, 102, 286, "Input",ExpressionUUID->"53bde28f-d333-5a47-855a-fcb9aa289b89"],
-Cell[179096, 4596, 51041, 1317, 392, "Output",ExpressionUUID->"e6c908c0-66fe-a049-9f68-557711abc290"]
+Cell[174866, 4499, 4433, 102, 286, "Input",ExpressionUUID->"53bde28f-d333-5a47-855a-fcb9aa289b89"],
+Cell[179302, 4603, 51041, 1317, 392, "Output",ExpressionUUID->"e6c908c0-66fe-a049-9f68-557711abc290"]
 }, Open  ]],
 Cell[CellGroupData[{
-Cell[230174, 5918, 189, 3, 43, "Subsubsection",ExpressionUUID->"3964ddd2-4cca-7542-9d86-029c3abd7b23"],
+Cell[230380, 5925, 189, 3, 43, "Subsubsection",ExpressionUUID->"3964ddd2-4cca-7542-9d86-029c3abd7b23"],
 Cell[CellGroupData[{
-Cell[230388, 5925, 733, 18, 104, "Input",ExpressionUUID->"f419f689-a16c-9043-b1e0-48f4bd335755"],
-Cell[231124, 5945, 279, 5, 32, "Output",ExpressionUUID->"acb18871-9fd9-b048-9323-2749c2b80b03"]
+Cell[230594, 5932, 733, 18, 104, "Input",ExpressionUUID->"f419f689-a16c-9043-b1e0-48f4bd335755"],
+Cell[231330, 5952, 279, 5, 32, "Output",ExpressionUUID->"acb18871-9fd9-b048-9323-2749c2b80b03"]
 }, Open  ]],
 Cell[CellGroupData[{
-Cell[231440, 5955, 529, 13, 85, "Input",ExpressionUUID->"82eb7c7c-9707-c944-ba2e-626ada3b66d9"],
-Cell[231972, 5970, 276, 5, 32, "Output",ExpressionUUID->"e5b0d02f-d29c-294c-b4c7-5411e9a56a31"]
+Cell[231646, 5962, 529, 13, 85, "Input",ExpressionUUID->"82eb7c7c-9707-c944-ba2e-626ada3b66d9"],
+Cell[232178, 5977, 276, 5, 32, "Output",ExpressionUUID->"e5b0d02f-d29c-294c-b4c7-5411e9a56a31"]
+}, Open  ]]
+}, Open  ]]
+}, Open  ]]
+}, Open  ]],
+Cell[CellGroupData[{
+Cell[232527, 5990, 170, 3, 66, "Section",ExpressionUUID->"b2f998e0-9edc-794a-90bb-4859f0fa40e1"],
+Cell[CellGroupData[{
+Cell[232722, 5997, 175, 3, 43, "Subsubsection",ExpressionUUID->"04e3c4cb-1ecc-5644-9f32-8e900dea4234"],
+Cell[232900, 6002, 7224, 182, 846, "Input",ExpressionUUID->"d8d34488-0f0b-644d-b4ed-303b3e75edd9"]
+}, Open  ]],
+Cell[CellGroupData[{
+Cell[240161, 6189, 331, 7, 43, "Subsubsection",ExpressionUUID->"705be0f6-cedc-764d-a6fc-e6180381197e"],
+Cell[240495, 6198, 1931, 46, 218, "Input",ExpressionUUID->"68f55570-c6be-ad44-b82d-49caf64d7ea2"]
+}, Open  ]],
+Cell[CellGroupData[{
+Cell[242463, 6249, 170, 3, 43, "Subsubsection",ExpressionUUID->"be69319e-5904-0144-a519-8f07339f16b4"],
+Cell[CellGroupData[{
+Cell[242658, 6256, 10392, 236, 1835, "Input",ExpressionUUID->"9a259fd5-68fe-4f4b-a182-bf460c1f66b9"],
+Cell[253053, 6494, 148, 2, 32, "Output",ExpressionUUID->"6c070ec2-8247-5c4a-aa30-dbfa8cb023ec"]
+}, Open  ]]
+}, Open  ]],
+Cell[CellGroupData[{
+Cell[253250, 6502, 171, 3, 43, "Subsubsection",ExpressionUUID->"e94206cb-17e5-a64d-b463-171fc7245a6b"],
+Cell[CellGroupData[{
+Cell[253446, 6509, 8037, 186, 1131, "Input",ExpressionUUID->"23e338d6-6d93-834b-8cea-b6bf01c273cc"],
+Cell[261486, 6697, 5818, 146, 559, "Output",ExpressionUUID->"cd076a1d-1204-9a49-977d-43fa49045deb"]
+}, Open  ]],
+Cell[267319, 6846, 528, 14, 85, "Input",ExpressionUUID->"81b016f2-a836-3c42-ab04-8603380cb81b"],
+Cell[267850, 6862, 3768, 97, 370, "Input",ExpressionUUID->"da18d050-ad95-c744-8f9c-eb8e57e4abe1"],
+Cell[CellGroupData[{
+Cell[271643, 6963, 936, 23, 104, "Input",ExpressionUUID->"807c1a75-25d6-bc48-be2e-1aa00c1e5903"],
+Cell[272582, 6988, 216, 4, 32, "Output",ExpressionUUID->"a207b281-1f7f-9147-9465-ec483813ede4"]
+}, Open  ]],
+Cell[CellGroupData[{
+Cell[272835, 6997, 327, 8, 28, "Input",ExpressionUUID->"55a6fd40-37d1-7b4c-89e3-cf77495d1308"],
+Cell[273165, 7007, 213, 4, 32, "Output",ExpressionUUID->"a5246091-c5ab-2746-8772-ee7ffdd0544a"]
+}, Open  ]],
+Cell[CellGroupData[{
+Cell[273415, 7016, 1944, 48, 256, "Input",ExpressionUUID->"b47b5553-ecad-114a-8f3b-b06af28127d8"],
+Cell[275362, 7066, 8715, 277, 70, "Output",ExpressionUUID->"f6d7e5a3-858f-9a49-94e2-0fe323c6d4bd"]
+}, Open  ]],
+Cell[CellGroupData[{
+Cell[284114, 7348, 952, 23, 161, "Input",ExpressionUUID->"475c9585-ed4a-c94f-bf96-bcfcf819d8d8"],
+Cell[285069, 7373, 1669, 52, 70, "Output",ExpressionUUID->"4f42c32b-b064-5343-865c-0f1beef5e096"]
+}, Open  ]],
+Cell[286753, 7428, 1530, 42, 218, "Input",ExpressionUUID->"37d9775e-c1fb-c04a-b397-4c8f6eab5672"],
+Cell[CellGroupData[{
+Cell[288308, 7474, 2354, 57, 237, "Input",ExpressionUUID->"d8f1842e-d53a-7c48-b3c4-719d4ee4dbfb"],
+Cell[290665, 7533, 1409, 41, 32, "Output",ExpressionUUID->"a57f905a-345e-c448-b228-8ee78c8dd537"]
+}, Open  ]],
+Cell[CellGroupData[{
+Cell[292111, 7579, 2831, 70, 408, "Input",ExpressionUUID->"5b50a4af-0175-9f42-a871-d62ebb1e7372"],
+Cell[294945, 7651, 25799, 691, 1790, "Output",ExpressionUUID->"6ce23b63-aa26-bb41-b4a4-1033be0961fd"]
+}, Open  ]],
+Cell[320759, 8345, 566, 13, 66, "Input",ExpressionUUID->"a6530c4c-931d-d844-9c41-ca6b2fbaf0e0"],
+Cell[CellGroupData[{
+Cell[321350, 8362, 2291, 59, 332, "Input",ExpressionUUID->"25d918eb-251a-c048-aaac-6ff70f4b75a6"],
+Cell[CellGroupData[{
+Cell[323666, 8425, 229, 4, 39, "Print",ExpressionUUID->"8bf2ea30-7d88-2d4b-addc-e734fa5ffecb"],
+Cell[323898, 8431, 403, 9, 22, "Print",ExpressionUUID->"939e0d45-313d-224f-9d51-32ab73806ab3"],
+Cell[324304, 8442, 343, 8, 22, "Print",ExpressionUUID->"26860c34-20bc-7946-a4e1-fb91669b08ae"],
+Cell[324650, 8452, 347, 8, 22, "Print",ExpressionUUID->"b49ba5d9-d2ee-fa40-ad0b-48511d3de543"],
+Cell[325000, 8462, 417, 9, 22, "Print",ExpressionUUID->"fef9b560-fb0c-0b47-9a7b-b61c2f7cd799"],
+Cell[325420, 8473, 419, 9, 22, "Print",ExpressionUUID->"0837aaa1-c4dc-2a42-9675-10542bbd8e88"],
+Cell[325842, 8484, 345, 8, 22, "Print",ExpressionUUID->"c2a66ee6-6910-194c-bde6-6d4bfe883067"],
+Cell[326190, 8494, 433, 10, 22, "Print",ExpressionUUID->"ddb7b747-9dec-5f44-862a-924d1ae7e0e6"]
+}, Open  ]]
 }, Open  ]]
 }, Open  ]]
 }, Open  ]]
