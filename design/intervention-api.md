@@ -1,6 +1,6 @@
 # Design: Intervention API
 
-**Status:** Proposed
+**Status:** Implemented
 **Relates to:** Roadmap §8 item 4
 
 ## Question

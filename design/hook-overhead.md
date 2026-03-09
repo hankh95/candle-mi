@@ -1,6 +1,6 @@
 # Design: Hook Overhead Model
 
-**Status:** Proposed
+**Status:** Implemented
 **Relates to:** Roadmap §8 item 3
 
 ## Question

@@ -355,8 +355,8 @@ Use `build_attribution_graph()` to score CLT features against a target logit
 direction, then inspect `AttributionEdge` scores. Complements the existing
 injection-only figure13 example.
 
-**Note:** `CrossLayerTranscoder::build_attribution_graph` is not yet
-implemented — this example depends on its addition (tracked in ROADMAP).
+**Note:** `CrossLayerTranscoder::build_attribution_graph` is implemented
+(see `src/clt/mod.rs`).
 
 **Key API surface:**
 `AttributionGraph`, `AttributionEdge`, `CrossLayerTranscoder::build_attribution_graph`

@@ -1,6 +1,6 @@
 # Design: RWKV-7 Effective Attention Formula
 
-**Status:** Proposed
+**Status:** Implemented
 **Relates to:** Roadmap §8 item 7, Phase 2
 
 ## Question

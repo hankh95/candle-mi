@@ -373,7 +373,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 - `Activation::GeluApprox` for PyTorch tanh-approximated GELU
   (`gelu_pytorch_tanh`)
 - `AttentionCache` for per-layer attention pattern storage
-- Integration tests validating all 6 model families on CPU (F32) and
+- Integration tests validating all 7 model families on CPU (F32) and
   GPU (BF16) against Python HuggingFace reference outputs
 - Hook overhead benchmark: +11.5% on GPU with full capture (194 hook
   points on LLaMA 3.2 1B), within noise on CPU

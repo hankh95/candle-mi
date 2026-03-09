@@ -1,6 +1,6 @@
 # Design: Error Handling
 
-**Status:** Proposed
+**Status:** Implemented
 **Relates to:** Roadmap §8 item 5
 
 ## Question

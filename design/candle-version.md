@@ -1,6 +1,6 @@
 # Design: Minimum Supported Candle Version
 
-**Status:** Proposed
+**Status:** Implemented
 **Relates to:** Roadmap §8 item 6
 
 ## Question

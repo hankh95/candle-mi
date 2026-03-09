@@ -1,6 +1,6 @@
 # Design: Hook System
 
-**Status:** Proposed
+**Status:** Implemented
 **Relates to:** Roadmap §2.1 (hook point table), §8 item 2
 
 ## Question
