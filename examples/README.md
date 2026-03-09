@@ -14,6 +14,7 @@ Runnable examples demonstrating candle-mi features.
 | `fast_download` | *(default)* | Download a model from `HuggingFace` Hub with parallel chunked transfers |
 | `quick_start_sae` | `sae`, `transformer` | Load an SAE, encode model activations, print top features and reconstruction error |
 | `auto_config_dogfood` | `transformer` | Download a model and test auto-config loading with compatibility check |
+| `generate` | `transformer` | Greedy autoregressive text generation on all cached models |
 | `figure13_planning_poems` | `clt`, `transformer` | Replication of [Anthropic's Figure 13](https://transformer-circuits.pub/2025/attribution-graphs/biology.html#dives-poem-location) (suppress + inject position sweep) |
 
 ## Running
@@ -33,6 +34,9 @@ cargo run --release --features transformer --example auto_config_dogfood -- "met
 
 # Auto-config dogfooding — failure (unsupported architecture)
 cargo run --release --features transformer --example auto_config_dogfood -- "allenai/OLMo-1B-hf"
+
+# Greedy text generation on all cached models
+cargo run --release --features transformer --example generate
 
 # Figure 13 replication — Llama 3.2 1B (default)
 cargo run --release --features clt,transformer --example figure13_planning_poems

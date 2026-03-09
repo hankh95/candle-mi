@@ -95,6 +95,10 @@ required-features = ["sae", "transformer"]
 name = "figure13_planning_poems"
 required-features = ["clt", "transformer"]
 
+[[example]]
+name = "generate"
+required-features = ["transformer"]
+
 [features]
 default = ["cuda", "transformer"]
 cuda = ["candle-core/cuda", "candle-nn/cuda"]
