@@ -9,6 +9,33 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 
 ### Added
 
+- **Memory reporting API** (`src/memory.rs`) — `MemorySnapshot` and
+  `MemoryReport` types for measuring RAM and VRAM consumption; RAM via
+  Windows FFI (`K32GetProcessMemoryInfo`, per-process, exact) or Linux
+  `/proc/self/status` (`VmRSS`, per-process, exact); VRAM via `nvidia-smi`
+  subprocess (device-wide); gated behind `features = ["memory"]` which
+  relaxes `forbid(unsafe_code)` to `deny(unsafe_code)` for one Windows FFI
+  call; `MIError::Memory` variant for measurement failures
+- **Autoregressive text generation example** (`generate.rs`) — greedy
+  decoding (temperature 0) with full-sequence recompute at each step (no KV
+  cache — all activations available for MI analysis); demonstrates
+  `sample_token`, `GenerationResult`, `HookSpec`; CLI model selection or
+  all-cached-models discovery; timing and estimated weight size reporting
+- **Logit lens example** (`logit_lens.rs`) — captures `ResidPost` at every
+  layer, projects to vocabulary via `project_to_vocab`, builds
+  `LogitLensAnalysis` with per-layer top-k predictions; demonstrates
+  `first_appearance()` for convergence tracking; tested on Llama 3.2 1B
+  ("Paris" at layer 11), Gemma 2 2B (never in top-10, soft-capped), and
+  StarCoder2 3B (code tokens dominate)
+- **Attention knockout example** (`attention_knockout.rs`) — knocks out a
+  single attention edge (last → first token) across all heads at a middle
+  layer; baseline vs ablated forward passes with `KnockoutSpec`,
+  `create_knockout_mask`, and `Intervention::Knockout`; prints KL divergence,
+  logit diff, and top-10 changed tokens; tested on Llama 3.2 1B (Paris
+  39.3% → 26.0%, KL=0.056), Gemma 2 2B (Paris 3.9% → 6.7%, inverted),
+  StarCoder2 3B (code model, "Par" dominates)
+- **Cross-model result tables** in `examples/README.md` — documented logit
+  lens convergence and attention knockout effects across 3 model families
 - **Auto-config for unknown model families** — `from_hf_config_auto()`
   automatically infers `TransformerConfig` from any HuggingFace `config.json`,
   with a compatibility check that verifies weight tensor names match
@@ -29,15 +56,27 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
   inject interventions)
 - `MITokenizer::find_token_id()` — look up a token ID by word string
 - `MITokenizer::decode_token()` — decode a single token ID back to string
+- Rust 2024 edition badge in `README.md`
 
 ### Changed
 
+- **CONVENTIONS.md `// SAFETY:` policy** — updated from "not expected" to a
+  feature-gated policy table; `mmap` and `memory` features each have
+  documented accepted unsafe scopes; three requirements: dedicated module,
+  `// SAFETY:` comments, `#[cfg(feature)]` gating
+- **`lib.rs` unsafe code policy** — `cfg_attr` lines now cover both `mmap`
+  and `memory` features: `forbid(unsafe_code)` by default, `deny(unsafe_code)`
+  when either feature is enabled
 - **Public API surface audit** — tightened visibility (`pub` → `pub(crate)`)
   across all modules; added missing `#[must_use]` annotations on all pure
   public functions and methods (two rounds: `70649e9`, `8595a61`, `2eedecf`)
 
 ### Fixed
 
+- **Attention knockout NaN** — full-row knockout (`from_position`) caused NaN
+  in softmax (all attention weights become -inf after causal mask); changed
+  to single-edge knockout (`edge(last, 0)`) which preserves valid attention
+  for other positions
 - Adapted to `hf-fetch-model` 0.7.2 `DownloadOutcome` API — added
   `.into_inner()` calls across `clt/mod.rs` (4 sites), `sae/mod.rs`
   (3 sites), `download.rs` (1 site), and `auto_config_dogfood.rs` (1 site)
