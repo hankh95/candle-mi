@@ -9,6 +9,7 @@
 mod rwkv;
 
 use crate::error::{MIError, Result};
+use crate::util::positioning::EncodingWithOffsets;
 
 /// Unified tokenizer supporting multiple backends.
 ///
@@ -109,6 +110,55 @@ impl MITokenizer {
             }
             #[cfg(feature = "rwkv-tokenizer")]
             Self::Rwkv(tok) => tok.encode(text),
+        }
+    }
+
+    /// Encode text into token IDs with character offset mapping.
+    ///
+    /// Returns an [`EncodingWithOffsets`] containing token IDs, token strings,
+    /// and byte-offset ranges for each token. Special tokens are added
+    /// (e.g., BOS for Gemma); special tokens receive a `(0, 0)` offset.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`MIError::Tokenizer`] if encoding fails or if the backend
+    /// does not support offset mapping (RWKV).
+    pub fn encode_with_offsets(&self, text: &str) -> Result<EncodingWithOffsets> {
+        self.encode_with_offsets_inner(text, true)
+    }
+
+    /// Encode text into token IDs with character offset mapping, **without**
+    /// adding special tokens.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`MIError::Tokenizer`] if encoding fails or if the backend
+    /// does not support offset mapping (RWKV).
+    pub fn encode_raw_with_offsets(&self, text: &str) -> Result<EncodingWithOffsets> {
+        self.encode_with_offsets_inner(text, false)
+    }
+
+    /// Shared implementation for offset-bearing encode methods.
+    fn encode_with_offsets_inner(
+        &self,
+        text: &str,
+        add_special_tokens: bool,
+    ) -> Result<EncodingWithOffsets> {
+        match self {
+            Self::HuggingFace(tok) => {
+                let encoding = tok
+                    .encode(text, add_special_tokens)
+                    .map_err(|e| MIError::Tokenizer(format!("HF encode failed: {e}")))?;
+                let ids = encoding.get_ids().to_vec();
+                let tokens: Vec<String> =
+                    encoding.get_tokens().iter().map(ToString::to_string).collect();
+                let offsets = encoding.get_offsets().to_vec();
+                Ok(EncodingWithOffsets::new(ids, tokens, offsets))
+            }
+            #[cfg(feature = "rwkv-tokenizer")]
+            Self::Rwkv(_) => Err(MIError::Tokenizer(
+                "RWKV tokenizer does not support offset mapping".into(),
+            )),
         }
     }
 
