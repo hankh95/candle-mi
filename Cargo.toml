@@ -127,6 +127,10 @@ required-features = ["rwkv"]
 name = "recurrent_feedback"
 required-features = ["transformer"]
 
+[[example]]
+name = "character_count_helix"
+required-features = ["transformer"]
+
 [features]
 default = ["cuda", "transformer"]
 cuda = ["candle-core/cuda", "candle-nn/cuda"]
