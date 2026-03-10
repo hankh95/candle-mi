@@ -24,8 +24,9 @@
 | `token_positions.rs` | **NEW — Implemented** | `EncodingWithOffsets`, `convert_positions`, `TokenWithOffset`, `PositionConversion`, `encode_with_offsets`, `char_to_token`, `token_to_char_range`, `char_range_to_tokens` |
 | `rwkv_inference.rs` | **NEW — Implemented** | `MIModel::from_pretrained` (RWKV), `HookPoint::RwkvState`, `HookPoint::RwkvDecay`, `HookPoint::ResidPost`, `StateKnockoutSpec`, `StateAblationResult`, `HookSpec::capture`, `sample_token` |
 | `recurrent_feedback.rs` | **NEW — Implemented** | `GenericTransformer`, `RecurrentPassSpec`, `RecurrentFeedbackEntry`, `forward_recurrent`, `generate_recurrent`, `embedding_vector`, `MITokenizer`, `sample_token`, `--output` JSON export, `MemorySnapshot`/`MemoryReport` |
+| `character_count_helix.rs` | **NEW — Implemented** | `pca_top_k`, `PcaResult`, `HookPoint::ResidPost`, `HookSpec::capture`, `HookCache::require`, `MIModel::from_pretrained`, `MITokenizer::encode_with_offsets`, `EncodingWithOffsets`, full-sequence activation capture, `--text` custom prose, `--output` JSON export |
 
-**Coverage estimate:** ~85 % of the public API surface (up from ~75 %).
+**Coverage estimate:** ~87 % of the public API surface (up from ~85 %).
 
 ---
 
@@ -427,10 +428,10 @@ Tested on Llama 3.2 1B.
 | **RWKV backend** | Missing | ✅ `rwkv_inference.rs` | ✅ |
 | **Recurrent feedback** | Missing | ✅ `recurrent_feedback.rs` | ✅ |
 | **KV-cached generation** | Missing | Missing | No proposed example yet |
-| **PCA / dimensionality reduction** | Missing | Missing | `character_count_helix.rs` (§7) |
-| **Paper replication** | Missing | Missing | `character_count_helix.rs` (§7) |
+| **PCA / dimensionality reduction** | Missing | ✅ `character_count_helix.rs` | ✅ |
+| **Paper replication** | Missing | ✅ `character_count_helix.rs` | ✅ |
 
-**Estimated coverage:** ~85 % now → ~95 % after all proposed examples.
+**Estimated coverage:** ~87 % now → ~95 % after all proposed examples.
 
 ---
 
@@ -736,22 +737,14 @@ crate required.
 
 ### 7.5 Verdict
 
-**Feasible: YES.** The PCA gap is closed by a ~40-line `pca_top_k()`
-utility using pure candle tensor ops (power iteration + deflation on the
-kernel matrix). This runs on GPU with zero host↔device transfers, needs
-no external dependency, and is reusable across multiple examples (logit
-lens, activation patching, etc.).
+**Status: IMPLEMENTED.** `pca_top_k()` in `src/util/pca.rs` (~80 lines
+including tests) uses power iteration with deflation on the kernel matrix.
+`character_count_helix.rs` example replicates the helix finding using
+Gemma 2 2B (or any cached model). Companion Mathematica script in
+`examples/results/character_count_helix/helix_plot.wl`.
 
-The example replicates a key finding from a landmark Anthropic paper
-using an open-weight model (Gemma 2 2B), exercises multiple uncovered API
-surfaces, and follows the existing `figure13` pattern of producing data
-for external visualization. It slots into the **Interpretability** group
-in §6.
-
-**Implementation order:**
-1. Add `src/util/pca.rs` with `pca_top_k()` (power iteration, ~40 lines)
-2. Write `character_count_helix.rs` example
-3. Write companion `character_count_helix/helix_plot.wl` Mathematica script
+Additional feature beyond the original design: `--text` flag for custom
+prose input, enabling replication across different text content.
 
 ---
 

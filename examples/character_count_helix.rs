@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: MIT OR Apache-2.0
 
-//! Character count helix: replicate the core finding from Gurnee et al. (2025)
+//! Character count helix: replicate the core finding from
+//! [Gurnee et al. (2025)](https://transformer-circuits.pub/2025/linebreaks/index.html)
 //! "When Models Manipulate Manifolds" (Transformer Circuits).
 //!
 //! ```bash

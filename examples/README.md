@@ -23,6 +23,7 @@ Runnable examples demonstrating candle-mi features.
 | `token_positions` | *(default)* | Character-to-token mapping with `EncodingWithOffsets` and `convert_positions` |
 | `rwkv_inference` | `rwkv` | RWKV-7 linear RNN inference with state hook capture and state knockout |
 | `recurrent_feedback` | `transformer` | Anacrousis / recurrent passes for rhyme completion (Taufeeque et al., 2024) |
+| `character_count_helix` | `transformer` | Replicate the character count helix from [Gurnee et al. (2025)](https://transformer-circuits.pub/2025/linebreaks/index.html) via PCA on residual stream activations |
 | `figure13_planning_poems` | `clt`, `transformer` | Replication of [Anthropic's Figure 13](https://transformer-circuits.pub/2025/attribution-graphs/biology.html#dives-poem-location) (suppress + inject position sweep) |
 
 ## Running
@@ -108,6 +109,18 @@ cargo run --release --features transformer --example recurrent_feedback -- --sus
 
 # Recurrent feedback — custom layer range and couplet limit
 cargo run --release --features transformer --example recurrent_feedback -- --loop-start 14 --loop-end 15 --max-couplets 5
+
+# Character count helix — default model (Gemma 2 2B), layer 1
+cargo run --release --features transformer --example character_count_helix
+
+# Character count helix — with JSON output for Mathematica plotting
+cargo run --release --features transformer --example character_count_helix -- --output examples/results/character_count_helix/helix_output.json
+
+# Character count helix — compare variance across layers 0-3
+cargo run --release --features transformer --example character_count_helix -- --all-layers
+
+# Character count helix — use your own prose file
+cargo run --release --features transformer --example character_count_helix -- --text mytext.txt
 
 # Figure 13 replication — Llama 3.2 1B (default)
 cargo run --release --features clt,transformer --example figure13_planning_poems
@@ -320,6 +333,33 @@ Output JSON and Mathematica plotting script are in
 - Lindsey et al., ["On the Biology of a Large Language Model"](https://transformer-circuits.pub/2025/attribution-graphs/biology.html), 2025
 - Eric Jacopin, ["Replicating 'Planning in Poems' with Open Tools"](https://github.com/PCfVW/plip-rs/tree/melometis/docs/planning-in-poems) (plip-rs melometis branch)
 
+### Example output: `character_count_helix`
+
+Replicates the core finding from [Gurnee et al. (2025)](https://transformer-circuits.pub/2025/linebreaks/index.html)
+"When Models Manipulate Manifolds" (Transformer Circuits). The model's residual stream represents line
+character count (characters since the last `\n`) as a helical 1D manifold in a
+low-dimensional subspace.
+
+The example wraps prose at 14 different line widths (20-150 chars), runs forward
+passes capturing `ResidPost` at an early layer, averages residual vectors by
+character count, and performs PCA on the resulting mean vectors. Expected results:
+
+- **Helix geometry**: The top 6 PCs capture ~95% of variance. Projecting the
+  150 mean vectors into PC1-3 reveals a helical curve.
+- **Ringing pattern**: The cosine similarity matrix shows off-diagonal
+  oscillation — nearby character counts are positively correlated, those further
+  apart are negatively correlated, then positive again (Gibbs-phenomenon-like
+  ringing from projecting a high-curvature curve into low dimensions).
+
+The `--text` flag lets you supply your own prose file to test whether the helix
+generalises across different text content. The `--all-layers` flag compares
+variance capture across layers 0-3.
+
+Output JSON and Mathematica plotting script (3D helix, cosine heatmap, variance
+bars) are in [`examples/results/character_count_helix/`](results/character_count_helix/).
+
+**Reference:** Gurnee et al., ["When Models Manipulate Manifolds"](https://transformer-circuits.pub/2025/linebreaks/index.html), Transformer Circuits, October 2025.
+
 ### Example output: `auto_config_dogfood`
 
 **Success** on Llama 3.2 1B (known family, uses manual parser):
@@ -361,5 +401,7 @@ Output JSON and Mathematica plotting script are in
   include `tokenizer.json`; RWKV-6 models require `--features rwkv-tokenizer`.
 - **recurrent_feedback** requires `meta-llama/Llama-3.2-1B` (default) cached
   locally.
+- **character_count_helix** defaults to `google/gemma-2-2b` (~8 GB VRAM at F32).
+  Use `--text` to supply your own prose file instead of the built-in passage.
 - **GPU recommended** for models larger than 1B parameters. candle-mi is
   developed on an RTX 5060 Ti (16 GB VRAM) with 64 GB RAM and CUDA 13.1.

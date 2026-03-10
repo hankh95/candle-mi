@@ -9,6 +9,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 
 ### Added
 
+- **PCA utility** (`src/util/pca.rs`) — `pca_top_k()` computes the top principal
+  components via power iteration with deflation on the kernel matrix; pure candle
+  tensor ops (runs transparently on CPU or GPU with zero host-device transfers);
+  returns `PcaResult` with components, eigenvalues, and explained variance ratios
+- **Character count helix example** (`character_count_helix.rs`) — replicates the
+  core finding from [Gurnee et al. (2025)](https://transformer-circuits.pub/2025/linebreaks/index.html)
+  "When Models Manipulate Manifolds" (Transformer Circuits); wraps prose at 14 widths, captures `ResidPost` at an
+  early layer, averages residual vectors by character count, and runs PCA;
+  demonstrates `pca_top_k`, `HookPoint::ResidPost`, `encode_with_offsets`, and
+  full-sequence activation capture; `--text` flag for custom prose input,
+  `--layer` for layer selection, `--all-layers` for cross-layer comparison,
+  `--output` for structured JSON export; companion Mathematica plotting script
+  for 3D helix, cosine heatmap, and variance bar chart
 - **Memory reporting API** (`src/memory.rs`) — `MemorySnapshot` and
   `MemoryReport` types for measuring RAM and VRAM consumption; RAM via
   Windows FFI (`K32GetProcessMemoryInfo`, per-process, exact) or Linux
