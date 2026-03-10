@@ -812,7 +812,7 @@ CI enforces the same three checks on every push. A red CI is treated as a blocki
 - [x] Write `HOOKS.md` — hook point reference and intervention walkthrough — **commit `4384545`**
 - [x] Write example programs — 15 examples covering forward pass, logit lens, attention patterns, knockout, steering, activation patching, CLT circuits, SAE, RWKV, auto-config, tokenization, generation, fast download, character count helix — **multiple commits**
 - [x] Improve auto-config error messaging — when `check_auto_compatibility()` fails for non-standard models (non-HF weight naming), provide actionable error messages listing which weight tensors were expected vs. found — **commit** `2685893`
-- [ ] Update CHANGELOG.md with Phase 5 changes — **commit** — **PUSH** (release candidate)
+- [x] Update CHANGELOG.md with Phase 5 changes — **commit `359a623`** — **PUSH** (release candidate)
 - [ ] **Release workflow** (publish v0.1.0 to crates.io — automated via `publish.yml`):
   1. Ensure `main` is clean: `git status` shows no uncommitted changes
   2. Bump version in `Cargo.toml` to `0.1.0` + update `Cargo.lock` — **commit: `release: v0.1.0`** — **PUSH**
