@@ -11,40 +11,46 @@
 //! # Specify a different model (non-sharded models don't need mmap)
 //! cargo run --release --features transformer --example character_count_helix -- "meta-llama/Llama-3.2-1B"
 //!
-//! # Export JSON for external plotting
-//! cargo run --release --features transformer,mmap --example character_count_helix -- --output results.json
+//! # Quick variance scan across all layers
+//! cargo run --release --features transformer,mmap --example character_count_helix -- --scan-layers all
 //!
-//! # Analyse a specific layer
-//! cargo run --release --features transformer,mmap --example character_count_helix -- --layer 2
+//! # Full PCA analysis on a specific layer with JSON export
+//! cargo run --release --features transformer,mmap --example character_count_helix -- --pca-layers 10..11 --output helix.json
 //!
-//! # Compare variance across layers 0-3
-//! cargo run --release --features transformer,mmap --example character_count_helix -- --all-layers
+//! # Full PCA analysis on several layers (JSON files named helix_L10.json, etc.)
+//! cargo run --release --features transformer,mmap --example character_count_helix -- --pca-layers 10..15 --output helix.json
+//!
+//! # Scan all layers then full analysis on the best ones
+//! cargo run --release --features transformer,mmap --example character_count_helix -- --scan-layers all --pca-layers 10..13
 //!
 //! # Use your own prose file
 //! cargo run --release --features transformer,mmap --example character_count_helix -- --text mytext.txt
+//!
+//! # Use a directory of text files (each file is a separate batch)
+//! cargo run --release --features transformer,mmap --example character_count_helix -- --text-dir texts/
 //! ```
 //!
 //! **What it does:**
 //!
-//! 1. Loads a transformer model and a prose passage (built-in or from `--text`).
+//! 1. Loads a transformer model and prose text (built-in, `--text`, or `--text-dir`).
 //! 2. Strips newlines and re-wraps at widths 20, 30, 40, ... 150 characters.
-//! 3. For each width, runs a forward pass capturing
+//! 3. For each text and width, runs a forward pass capturing
 //!    [`HookPoint::ResidPost`](candle_mi::HookPoint::ResidPost) at the target
 //!    layer, then computes each token's line character count from byte offsets.
 //! 4. Averages residual-stream vectors by character count (1..=150).
 //! 5. Runs [`pca_top_k`](candle_mi::pca_top_k) on the mean vectors (6 PCs).
-//! 6. Computes a 150x150 cosine-similarity matrix on the mean vectors.
+//! 6. Computes a `150x150` cosine-similarity matrix on the mean vectors.
 //! 7. Prints a summary and optionally writes structured JSON output.
 //!
 //! The JSON output can be visualised with the companion Mathematica script
 //! `examples/results/character_count_helix/helix_plot.wl`.
 
-#![allow(clippy::doc_markdown)]
 #![allow(clippy::missing_docs_in_private_items)]
 #![allow(clippy::unnecessary_wraps)]
-#![allow(clippy::cast_precision_loss)]
 
 use candle_mi::{HookPoint, HookSpec, MIModel, MITokenizer, PcaResult, pca_top_k};
+#[cfg(feature = "memory")]
+use candle_mi::{MemoryReport, MemorySnapshot};
 use clap::Parser;
 use serde::Serialize;
 use std::collections::HashMap;
@@ -66,17 +72,29 @@ struct Args {
     #[arg(long)]
     output: Option<PathBuf>,
 
-    /// Which layer to capture (0-indexed, default: 1)
-    #[arg(long, default_value_t = 1)]
-    layer: usize,
+    /// Lightweight variance scan across a layer range.
+    /// Use `all` to scan every layer, or `START..END` for a specific range
+    /// (exclusive end, e.g. `5..15` scans layers 5 through 14).
+    #[arg(long, value_name = "all | START..END")]
+    scan_layers: Option<String>,
 
-    /// Compare explained variance across layers 0-3
-    #[arg(long)]
-    all_layers: bool,
+    /// Full PCA analysis (+ cosine similarity, JSON) across a layer range.
+    /// Accepts the same values as `--scan-layers`.
+    /// Default when neither flag is given: full analysis on layer 1.
+    #[arg(long, value_name = "all | START..END")]
+    pca_layers: Option<String>,
 
     /// Path to a plain-text file to use as prose input (default: built-in passage)
     #[arg(long)]
     text: Option<PathBuf>,
+
+    /// Path to a directory of `.txt` files (each file is processed as a separate batch)
+    #[arg(long)]
+    text_dir: Option<PathBuf>,
+
+    /// Maximum tokens per forward pass (longer sequences are truncated). Default: 4096.
+    #[arg(long, default_value_t = 4096)]
+    max_tokens: usize,
 }
 
 // ---------------------------------------------------------------------------
@@ -178,6 +196,11 @@ fn run() -> candle_mi::Result<()> {
     println!("=== Character Count Helix ===\n");
 
     // 1. Load model
+    #[cfg(feature = "memory")]
+    let mem_before = MemorySnapshot::now(
+        &candle_core::Device::cuda_if_available(0).unwrap_or(candle_core::Device::Cpu),
+    )?;
+
     let t0 = Instant::now();
     let model = MIModel::from_pretrained(model_id)?;
     let load_time = t0.elapsed();
@@ -187,71 +210,137 @@ fn run() -> candle_mi::Result<()> {
         "Model: {model_id} ({n_layers} layers, hidden={hidden}, device={:?})",
         model.device(),
     );
-    println!("Load time: {load_time:.2?}\n");
+    println!("Load time: {load_time:.2?}");
+
+    #[cfg(feature = "memory")]
+    {
+        let mem_after = MemorySnapshot::now(model.device())?;
+        MemoryReport::new(mem_before, mem_after).print_before_after("Model load");
+    }
+
+    println!();
 
     let tokenizer = model.tokenizer().ok_or(candle_mi::MIError::Tokenizer(
         "model has no embedded tokenizer".into(),
     ))?;
 
-    // 2. Prepare prose (from file or built-in)
-    let prose_owned: String;
-    if let Some(ref text_path) = args.text {
-        prose_owned = std::fs::read_to_string(text_path).map_err(|e| {
+    // 2. Prepare prose texts (from directory, single file, or built-in)
+    let prose_texts = load_prose_texts(&args)?;
+    let widths: Vec<usize> = (20..=150).step_by(10).collect(); // 14 widths
+
+    // 3. Lightweight variance scan if requested
+    let scan_range = parse_layer_range(args.scan_layers.as_deref(), "scan-layers", n_layers)?;
+    if let Some((start, end)) = scan_range {
+        run_variance_scan(
+            &model,
+            tokenizer,
+            &prose_texts,
+            &widths,
+            hidden,
+            start,
+            end,
+            args.max_tokens,
+        )?;
+    }
+
+    // 4. Full PCA analysis
+    let pca_range = parse_layer_range(args.pca_layers.as_deref(), "pca-layers", n_layers)?;
+    // Default: analyse layer 1 when neither flag is given
+    let pca_layers: Vec<usize> = if let Some((start, end)) = pca_range {
+        (start..end).collect()
+    } else if scan_range.is_none() {
+        vec![1.min(n_layers.saturating_sub(1))]
+    } else {
+        vec![]
+    };
+
+    let multi_pca = pca_layers.len() > 1;
+    for &layer in &pca_layers {
+        // When analysing multiple layers, embed the layer number in the filename
+        let layer_path = if multi_pca {
+            args.output.as_deref().map(|p| {
+                let stem = p.file_stem().unwrap_or_default().to_string_lossy();
+                let ext = p.extension().unwrap_or_default().to_string_lossy();
+                p.with_file_name(format!("{stem}_L{layer}.{ext}"))
+            })
+        } else {
+            args.output.clone()
+        };
+        run_analysis(
+            &model,
+            tokenizer,
+            &prose_texts,
+            &widths,
+            layer,
+            model_id,
+            layer_path.as_deref(),
+            args.max_tokens,
+        )?;
+    }
+
+    println!("Total runtime: {:.2?}", t0.elapsed());
+    Ok(())
+}
+
+/// Load prose texts from `--text-dir`, `--text`, or the built-in passage.
+fn load_prose_texts(args: &Args) -> candle_mi::Result<Vec<String>> {
+    if let Some(ref dir_path) = args.text_dir {
+        let texts = load_text_dir(dir_path)?;
+        println!(
+            "Prose source: {} files from {}",
+            texts.len(),
+            dir_path.display()
+        );
+        Ok(texts)
+    } else if let Some(ref text_path) = args.text {
+        let raw = std::fs::read_to_string(text_path).map_err(|e| {
             candle_mi::MIError::Config(format!("failed to read {}: {e}", text_path.display()))
         })?;
         println!("Prose source: {}", text_path.display());
+        Ok(vec![strip_newlines(&raw)])
     } else {
-        prose_owned = prose_passage().to_string();
         println!("Prose source: built-in (tectonic plates, ~500 words)");
+        Ok(vec![strip_newlines(prose_passage())])
     }
-    let prose = strip_newlines(&prose_owned);
-    let widths: Vec<usize> = (20..=150).step_by(10).collect(); // 14 widths
+}
 
-    // 3. Multi-layer comparison if requested
-    if args.all_layers {
-        let max_layer = 3.min(n_layers.saturating_sub(1));
-        println!("--- Layer comparison (0..={max_layer}) ---\n");
-        for layer in 0..=max_layer {
-            let means = collect_means(&model, tokenizer, &prose, &widths, layer)?;
-            if means.is_empty() {
-                println!("  Layer {layer}: no valid character counts collected");
-                continue;
-            }
-            let matrix = build_mean_matrix(&means, hidden, model.device())?;
-            let pca = pca_top_k(&matrix, 6.min(matrix.dim(0)?), 50)?;
-            let total: f32 = pca.explained_variance_ratio.iter().sum();
-            println!(
-                "  Layer {layer}: top-6 variance = {:.1}%  [{:.1}, {:.1}, {:.1}, {:.1}, {:.1}, {:.1}]",
-                // CAST: f32 * 100.0 for display percentage
-                total * 100.0,
-                pca.explained_variance_ratio.first().copied().unwrap_or(0.0) * 100.0,
-                pca.explained_variance_ratio.get(1).copied().unwrap_or(0.0) * 100.0,
-                pca.explained_variance_ratio.get(2).copied().unwrap_or(0.0) * 100.0,
-                pca.explained_variance_ratio.get(3).copied().unwrap_or(0.0) * 100.0,
-                pca.explained_variance_ratio.get(4).copied().unwrap_or(0.0) * 100.0,
-                pca.explained_variance_ratio.get(5).copied().unwrap_or(0.0) * 100.0,
-            );
+/// Run a lightweight variance scan across layers `start..end`, printing a summary table.
+#[allow(clippy::too_many_arguments)]
+fn run_variance_scan(
+    model: &MIModel,
+    tokenizer: &MITokenizer,
+    prose_texts: &[String],
+    widths: &[usize],
+    hidden: usize,
+    start: usize,
+    end: usize,
+    max_tokens: usize,
+) -> candle_mi::Result<()> {
+    println!("--- Variance scan [{start}, {end}) ---\n");
+    for layer in start..end {
+        let t_layer = Instant::now();
+        let means = collect_means_multi(model, tokenizer, prose_texts, widths, layer, max_tokens)?;
+        if means.is_empty() {
+            println!("  Layer {layer:>2}: no valid character counts collected");
+            continue;
         }
-        println!();
+        let matrix = build_mean_matrix(&means, hidden, model.device())?;
+        let pca = pca_top_k(&matrix, 6.min(matrix.dim(0)?), 50)?;
+        let total: f32 = pca.explained_variance_ratio.iter().sum();
+        let elapsed = t_layer.elapsed();
+        println!(
+            "  Layer {layer:>2}: top-6 variance = {:.1}%  [{:.1}, {:.1}, {:.1}, {:.1}, {:.1}, {:.1}]  ({elapsed:.2?})",
+            total * 100.0,
+            pca.explained_variance_ratio.first().copied().unwrap_or(0.0) * 100.0,
+            pca.explained_variance_ratio.get(1).copied().unwrap_or(0.0) * 100.0,
+            pca.explained_variance_ratio.get(2).copied().unwrap_or(0.0) * 100.0,
+            pca.explained_variance_ratio.get(3).copied().unwrap_or(0.0) * 100.0,
+            pca.explained_variance_ratio.get(4).copied().unwrap_or(0.0) * 100.0,
+            pca.explained_variance_ratio.get(5).copied().unwrap_or(0.0) * 100.0,
+        );
     }
-
-    // 4. Main analysis on the target layer
-    let layer = args.layer;
-    if layer >= n_layers {
-        return Err(candle_mi::MIError::Config(format!(
-            "layer {layer} out of range (model has {n_layers} layers)"
-        )));
-    }
-
-    run_analysis(
-        &model,
-        tokenizer,
-        &prose,
-        &widths,
-        layer,
-        model_id,
-        args.output.as_deref(),
-    )
+    println!();
+    Ok(())
 }
 
 /// Run the main PCA analysis on a single layer and optionally write JSON.
@@ -259,21 +348,23 @@ fn run() -> candle_mi::Result<()> {
 fn run_analysis(
     model: &MIModel,
     tokenizer: &MITokenizer,
-    prose: &str,
+    prose_texts: &[String],
     widths: &[usize],
     layer: usize,
     model_id: &str,
     json_path: Option<&Path>,
+    max_tokens: usize,
 ) -> candle_mi::Result<()> {
     let hidden = model.hidden_size();
-    println!("--- Main analysis: layer {layer} ---\n");
+    println!("--- Full PCA analysis: layer {layer} ---\n");
 
     let t1 = Instant::now();
-    let means = collect_means(model, tokenizer, prose, widths, layer)?;
+    let means = collect_means_multi(model, tokenizer, prose_texts, widths, layer, max_tokens)?;
     let collect_time = t1.elapsed();
     println!(
-        "Collected {} valid character counts across {} widths in {collect_time:.2?}",
+        "Collected {} valid character counts across {} texts x {} widths in {collect_time:.2?}",
         means.len(),
+        prose_texts.len(),
         widths.len(),
     );
 
@@ -282,7 +373,7 @@ fn run_analysis(
         return Ok(());
     }
 
-    // 5. PCA
+    // PCA
     let matrix = build_mean_matrix(&means, hidden, model.device())?;
     let n_samples = matrix.dim(0)?;
     let n_components = 6.min(n_samples);
@@ -298,16 +389,16 @@ fn run_analysis(
     }
     println!();
 
-    // 6. Project means into PC space
+    // Project means into PC space
     let projections = project_to_pcs(&matrix, &pca)?;
 
-    // 7. Cosine similarity matrix
+    // Cosine similarity matrix
     let cosine_sim = cosine_similarity_matrix(&matrix)?;
 
-    // 8. Print cosine similarity summary (ringing pattern check)
+    // Ringing pattern check
     print_ringing_summary(&cosine_sim, &means);
 
-    // 9. JSON output
+    // JSON output
     if let Some(path) = json_path {
         let sorted_counts: Vec<usize> = sorted_char_counts(&means);
         let proj_entries: Vec<Projection> = sorted_counts
@@ -340,14 +431,52 @@ fn run_analysis(
 // Activation collection
 // ---------------------------------------------------------------------------
 
+/// Collect means across multiple prose texts, merging their accumulators.
+fn collect_means_multi(
+    model: &MIModel,
+    tokenizer: &MITokenizer,
+    prose_texts: &[String],
+    widths: &[usize],
+    layer: usize,
+    max_tokens: usize,
+) -> candle_mi::Result<HashMap<usize, (Vec<f64>, usize)>> {
+    let mut merged: HashMap<usize, (Vec<f64>, usize)> = HashMap::new();
+    let hidden = model.hidden_size();
+
+    let n_texts = prose_texts.len();
+    for (text_idx, prose) in prose_texts.iter().enumerate() {
+        let t_text = Instant::now();
+        let partial = collect_means(model, tokenizer, prose, widths, layer, max_tokens)?;
+        let tokens_in_text: usize = partial.values().map(|(_, c)| c).sum();
+        eprintln!(
+            "    text {}/{n_texts}: {tokens_in_text} tokens across {} widths ({:.1?})",
+            text_idx + 1,
+            widths.len(),
+            t_text.elapsed(),
+        );
+        for (cc, (sum_vec, count)) in partial {
+            let entry = merged
+                .entry(cc)
+                .or_insert_with(|| (vec![0.0_f64; hidden], 0));
+            for (acc, val) in entry.0.iter_mut().zip(sum_vec.iter()) {
+                *acc += val;
+            }
+            entry.1 += count;
+        }
+    }
+
+    Ok(merged)
+}
+
 /// For each line width, run a forward pass and accumulate residual vectors
-/// by character count. Returns a map from char_count to (sum_vector, count).
+/// by character count. Returns a map from `char_count` to `(sum_vector, count)`.
 fn collect_means(
     model: &MIModel,
     tokenizer: &MITokenizer,
     prose: &str,
     widths: &[usize],
     layer: usize,
+    max_tokens: usize,
 ) -> candle_mi::Result<HashMap<usize, (Vec<f64>, usize)>> {
     let mut accum: HashMap<usize, (Vec<f64>, usize)> = HashMap::new();
     let hidden = model.hidden_size();
@@ -356,8 +485,21 @@ fn collect_means(
         let wrapped = word_wrap(prose, width);
         let encoding = tokenizer.encode_with_offsets(&wrapped)?;
 
+        // Truncate to max_tokens to avoid OOM on long sequences
+        let full_len = encoding.ids.len();
+        let seq_len = full_len.min(max_tokens);
+        if seq_len < full_len {
+            eprintln!("      width {width}: truncated {full_len} -> {seq_len} tokens",);
+        }
+        // INDEX: seq_len <= encoding.ids.len() by .min(); safe
+        #[allow(clippy::indexing_slicing)]
+        let ids = &encoding.ids[..seq_len];
+        // INDEX: offsets.len() == ids.len() from encode_with_offsets; seq_len <= ids.len()
+        #[allow(clippy::indexing_slicing)]
+        let offsets = &encoding.offsets[..seq_len];
+
         // Build input tensor
-        let input = candle_core::Tensor::new(&encoding.ids[..], model.device())?.unsqueeze(0)?; // [1, seq]
+        let input = candle_core::Tensor::new(ids, model.device())?.unsqueeze(0)?; // [1, seq]
 
         // Capture ResidPost at the target layer
         let mut hooks = HookSpec::new();
@@ -369,12 +511,12 @@ fn collect_means(
 
         // PROMOTE: extract as F32 for accumulation into F64 sums
         let resid_f32 = resid_2d.to_dtype(candle_core::DType::F32)?;
-        let resid_data: Vec<Vec<f32>> = (0..encoding.ids.len())
+        let resid_data: Vec<Vec<f32>> = (0..seq_len)
             .map(|i| -> candle_mi::Result<Vec<f32>> { Ok(resid_f32.get(i)?.to_vec1()?) })
             .collect::<candle_mi::Result<Vec<_>>>()?;
 
         // For each token, compute line character count from byte offsets
-        for (tok_idx, &(start, end)) in encoding.offsets.iter().enumerate() {
+        for (tok_idx, &(start, end)) in offsets.iter().enumerate() {
             // Skip BOS/special tokens with (0, 0) offset
             if start == 0 && end == 0 {
                 continue;
@@ -389,7 +531,7 @@ fn collect_means(
             let entry = accum
                 .entry(char_count)
                 .or_insert_with(|| (vec![0.0_f64; hidden], 0));
-            // INDEX: tok_idx is bounded by encoding.offsets.len() == encoding.ids.len() == resid_data.len()
+            // INDEX: tok_idx is bounded by offsets.len() == seq_len == resid_data.len()
             #[allow(clippy::indexing_slicing)]
             let token_resid = &resid_data[tok_idx];
             for (acc, &val) in entry.0.iter_mut().zip(token_resid.iter()) {
@@ -445,7 +587,7 @@ fn build_mean_matrix(
             continue;
         };
         // CAST: usize → f64, count is small; exact in f64 mantissa
-        #[allow(clippy::as_conversions)]
+        #[allow(clippy::as_conversions, clippy::cast_precision_loss)]
         let count_f64 = *count as f64;
         for &s in sum {
             // CAST: f64 → f32, precision loss acceptable for mean vector
@@ -533,8 +675,93 @@ fn cosine_similarity_matrix(matrix: &candle_core::Tensor) -> candle_mi::Result<V
 }
 
 // ---------------------------------------------------------------------------
+// CLI helpers
+// ---------------------------------------------------------------------------
+
+/// Parse a layer range spec into a `(start, end)` pair (exclusive end).
+///
+/// Accepted values: `"all"` → `(0, n_layers)`, `"START..END"` → parsed range.
+/// Returns `None` when `spec` is `None`.
+///
+/// # Errors
+///
+/// Returns an error if the range string is malformed or out of bounds.
+fn parse_layer_range(
+    spec: Option<&str>,
+    flag_name: &str,
+    n_layers: usize,
+) -> candle_mi::Result<Option<(usize, usize)>> {
+    let Some(spec) = spec else {
+        return Ok(None);
+    };
+    if spec.eq_ignore_ascii_case("all") {
+        return Ok(Some((0, n_layers)));
+    }
+    // Expect "START..END"
+    let Some((start_str, end_str)) = spec.split_once("..") else {
+        return Err(candle_mi::MIError::Config(format!(
+            "invalid --{flag_name} value \"{spec}\": expected \"all\" or \"START..END\""
+        )));
+    };
+    let start: usize = start_str.parse().map_err(|_| {
+        candle_mi::MIError::Config(format!(
+            "invalid --{flag_name} start \"{start_str}\": expected integer"
+        ))
+    })?;
+    let end: usize = end_str.parse().map_err(|_| {
+        candle_mi::MIError::Config(format!(
+            "invalid --{flag_name} end \"{end_str}\": expected integer"
+        ))
+    })?;
+    if start >= end || end > n_layers {
+        return Err(candle_mi::MIError::Config(format!(
+            "--{flag_name} {start}..{end} is out of range (model has {n_layers} layers)"
+        )));
+    }
+    Ok(Some((start, end)))
+}
+
+// ---------------------------------------------------------------------------
 // Text utilities
 // ---------------------------------------------------------------------------
+
+/// Load all `.txt` files from a directory, sorted by name, with newlines stripped.
+///
+/// # Errors
+///
+/// Returns an error if the directory cannot be read or any file fails to load.
+fn load_text_dir(dir: &Path) -> candle_mi::Result<Vec<String>> {
+    let mut paths: Vec<PathBuf> = std::fs::read_dir(dir)
+        .map_err(|e| candle_mi::MIError::Config(format!("cannot read {}: {e}", dir.display())))?
+        .filter_map(|entry| {
+            let entry = entry.ok()?;
+            let path = entry.path();
+            if path.extension().and_then(|e| e.to_str()) == Some("txt") {
+                Some(path)
+            } else {
+                None
+            }
+        })
+        .collect();
+    paths.sort();
+
+    if paths.is_empty() {
+        return Err(candle_mi::MIError::Config(format!(
+            "no .txt files found in {}",
+            dir.display()
+        )));
+    }
+
+    let mut texts = Vec::with_capacity(paths.len());
+    for path in &paths {
+        let raw = std::fs::read_to_string(path).map_err(|e| {
+            candle_mi::MIError::Config(format!("failed to read {}: {e}", path.display()))
+        })?;
+        println!("  loaded: {} ({} bytes)", path.display(), raw.len());
+        texts.push(strip_newlines(&raw));
+    }
+    Ok(texts)
+}
 
 /// Strip all newlines from text, replacing them with spaces.
 fn strip_newlines(text: &str) -> String {
@@ -598,12 +825,12 @@ fn print_ringing_summary(cosine_sim: &[Vec<f32>], accum: &HashMap<usize, (Vec<f6
 
     println!("Cosine similarity by offset distance (ringing pattern):");
     for d in 0..max_offset.min(20) {
-        let cnt = avg_at_offset.get(d).copied().unwrap_or(0.0);
+        let sum = avg_at_offset.get(d).copied().unwrap_or(0.0);
         let count = count_at_offset.get(d).copied().unwrap_or(0);
         if count > 0 {
-            // CAST: usize → f64 for division
-            #[allow(clippy::as_conversions)]
-            let avg = cnt / count as f64;
+            // CAST: usize → f64, count is small; exact in f64 mantissa
+            #[allow(clippy::as_conversions, clippy::cast_precision_loss)]
+            let avg = sum / count as f64;
             let bar_len = ((avg + 1.0) * 20.0).clamp(0.0, 40.0);
             // CAST: f64 → usize for repeat count; clamped to [0, 40]
             #[allow(
