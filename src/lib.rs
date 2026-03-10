@@ -143,6 +143,9 @@ pub use interp::steering::{DoseResponseCurve, DoseResponsePoint, SteeringCalibra
 // Utility — masks
 pub use util::masks::{clear_mask_caches, create_causal_mask, create_generation_mask};
 
+// Utility — PCA
+pub use util::pca::{PcaResult, pca_top_k};
+
 // Utility — positioning
 pub use util::positioning::{
     EncodingWithOffsets, PositionConversion, TokenWithOffset, convert_positions,
