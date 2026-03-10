@@ -38,16 +38,26 @@ fn run(model_id: &str) -> candle_mi::Result<()> {
 }
 
 /// Download the model and measure elapsed time.
+///
+/// Uses `hf_fetch_model` directly (without indicatif progress bars) to
+/// avoid terminal artifacts when files are already cached.
 fn download_phase(model_id: &str) -> candle_mi::Result<()> {
     eprintln!("=== Step 1: Download ===");
     eprintln!("Model: {model_id}");
     eprintln!("(Files will be cached in ~/.cache/huggingface/hub/)\n");
 
     let t0 = std::time::Instant::now();
-    let path = candle_mi::download_model_blocking(model_id.to_owned())?;
+    let outcome = hf_fetch_model::download_files_blocking(model_id.to_owned())
+        .map_err(|e| candle_mi::MIError::Download(e.to_string()))?;
     let elapsed = t0.elapsed();
     eprintln!("Download complete in {elapsed:.2?}");
-    eprintln!("Cache path: {}\n", path.display());
+    let path = outcome.into_inner();
+    // BORROW: `path` is a HashMap; grab any value to show the cache root
+    if let Some(first) = path.values().next() {
+        if let Some(snapshot_dir) = first.parent() {
+            eprintln!("Cache path: {}\n", snapshot_dir.display());
+        }
+    }
     Ok(())
 }
 

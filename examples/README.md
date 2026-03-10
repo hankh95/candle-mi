@@ -44,6 +44,9 @@ cargo run --release --features transformer --example auto_config_dogfood -- "met
 # Auto-config dogfooding — failure (unsupported architecture)
 cargo run --release --features transformer --example auto_config_dogfood -- "allenai/OLMo-1B-hf"
 
+# Auto-config dogfooding — failure with actionable hints (non-standard naming)
+cargo run --release --features transformer --example auto_config_dogfood -- "EleutherAI/pythia-1.4b"
+
 # Greedy text generation — single model (recommended for 7B+ to avoid OOM)
 cargo run --release --features transformer --example generate -- "meta-llama/Llama-3.2-1B"
 
@@ -381,6 +384,16 @@ OLMo-1B fails the compatibility check because its weight names
 match the normalisation tensor patterns that `GenericTransformer` expects.
 candle-mi currently supports 7 model families: LLaMA, Qwen2, Gemma, Gemma 2,
 Phi-3, Mistral, and StarCoder2.
+
+**Failure with actionable diagnostics** on Pythia 1.4B (non-standard naming):
+
+![auto_config_dogfood failure on Pythia 1.4B with actionable hints](screenshots/auto_config_pythia.png)
+
+Pythia uses the `gpt_neox.layers.{i}` weight prefix instead of the
+HF-standard `model.layers.{i}`. The error message now shows which tensors
+*were* found for each expected category (embedding, norm, attention, MLP),
+detects the GPT-NeoX / Pythia naming convention, and points to Phase 9
+(tensor name remapping) for planned support.
 
 ### Example output: `figure13_planning_poems`
 
