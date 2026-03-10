@@ -1104,75 +1104,14 @@ impl TransformerConfig {
         let field_report = Self::check_config_fields(config);
         issues.extend(field_report.issues);
 
-        // Helper: check if a tensor name exists
-        let has = |name: &str| tensor_names.iter().any(|n| n == name);
-        let has_layer0 = |suffix: &str| {
-            tensor_names
-                .iter()
-                .any(|n| n.contains("layers.0.") && n.ends_with(suffix))
-        };
+        // --- Tensor name checks (with "did you mean?" hints) ---
+        let has_tensor_issues = check_tensor_names(config, tensor_names, &mut issues);
 
-        // --- Embedding ---
-        if !has("model.embed_tokens.weight") {
-            issues.push("missing embedding tensor 'model.embed_tokens.weight'".into());
-        }
-
-        // --- Layer-0 normalization ---
-        if !has_layer0("input_layernorm.weight") {
-            issues.push(
-                "missing normalization tensor 'model.layers.0.input_layernorm.weight' \
-                 (model may use non-parametric norms, which are not yet supported)"
-                    .into(),
-            );
-        }
-        if !has_layer0("post_attention_layernorm.weight")
-            && !has_layer0("pre_feedforward_layernorm.weight")
-        {
-            issues.push(
-                "missing normalization tensor 'model.layers.0.post_attention_layernorm.weight' \
-                 (model may use non-parametric norms, which are not yet supported)"
-                    .into(),
-            );
-        }
-
-        // --- Final norm ---
-        if !has("model.norm.weight") {
-            issues.push("missing final norm tensor 'model.norm.weight'".into());
-        }
-
-        // --- Attention projections ---
-        let has_separate_attn = has_layer0("self_attn.q_proj.weight");
-        let has_fused_attn = has_layer0("self_attn.qkv_proj.weight");
-        if !has_separate_attn && !has_fused_attn {
-            issues.push(
-                "missing attention projections: expected 'self_attn.q_proj.weight' \
-                 or 'self_attn.qkv_proj.weight'"
-                    .into(),
-            );
-        }
-
-        // --- MLP projections ---
-        let has_gated_separate = has_layer0("mlp.gate_proj.weight");
-        let has_gated_fused = has_layer0("mlp.gate_up_proj.weight");
-        let has_plain = has_layer0("mlp.c_fc.weight");
-        // Also accept down_proj as evidence of a recognized MLP
-        let has_down = has_layer0("mlp.down_proj.weight");
-        if !has_gated_separate && !has_gated_fused && !has_plain && !has_down {
-            issues.push(
-                "missing MLP projections: expected 'mlp.gate_proj.weight', \
-                 'mlp.gate_up_proj.weight', or 'mlp.c_fc.weight'"
-                    .into(),
-            );
-        }
-
-        // --- LM head ---
-        let tie = config
-            .get("tie_word_embeddings")
-            .and_then(Value::as_bool)
-            .unwrap_or_else(|| !tensor_names.iter().any(|n| n == "lm_head.weight"));
-        if !tie && !has("lm_head.weight") {
-            issues
-                .push("tie_word_embeddings is false but 'lm_head.weight' tensor is missing".into());
+        // --- Summary of actual naming convention (when tensor checks fail) ---
+        if has_tensor_issues && !tensor_names.is_empty() {
+            if let Some(hint) = detect_naming_convention(tensor_names) {
+                issues.push(hint);
+            }
         }
 
         CompatibilityReport {
@@ -1180,6 +1119,204 @@ impl TransformerConfig {
             issues,
         }
     }
+}
+
+/// Check safetensors tensor names against the patterns `GenericTransformer`
+/// expects, appending actionable diagnostics (with "did you mean?" hints)
+/// to `issues`.
+///
+/// Returns `true` if any tensor-name issue was found.
+#[allow(clippy::too_many_lines)]
+fn check_tensor_names(config: &Value, tensor_names: &[String], issues: &mut Vec<String>) -> bool {
+    // Helper: check if a tensor name exists
+    let has = |name: &str| tensor_names.iter().any(|n| n == name);
+    let has_layer0 = |suffix: &str| {
+        tensor_names
+            .iter()
+            .any(|n| n.contains("layers.0.") && n.ends_with(suffix))
+    };
+
+    // Helper: find tensors matching a keyword (for "did you mean?" hints)
+    let find_matching = |keyword: &str, limit: usize| -> Vec<&str> {
+        tensor_names
+            .iter()
+            .filter(|n| n.to_lowercase().contains(keyword))
+            .take(limit)
+            .map(String::as_str)
+            .collect::<Vec<_>>()
+    };
+
+    let mut has_issues = false;
+
+    // --- Embedding ---
+    if !has("model.embed_tokens.weight") {
+        has_issues = true;
+        let found: Vec<&str> = tensor_names
+            .iter()
+            .filter(|n| n.contains("embed") || n.contains("wte") || n.contains("word_embeddings"))
+            .take(3)
+            .map(String::as_str)
+            .collect();
+        let hint = if found.is_empty() {
+            String::new()
+        } else {
+            format!("; found embedding-like tensors: {}", found.join(", "))
+        };
+        issues.push(format!(
+            "missing embedding tensor 'model.embed_tokens.weight'{hint}"
+        ));
+    }
+
+    // --- Layer-0 normalization ---
+    if !has_layer0("input_layernorm.weight") {
+        has_issues = true;
+        let found = find_matching("norm", 4);
+        let hint = if found.is_empty() {
+            String::new()
+        } else {
+            format!("; found norm-like tensors: {}", found.join(", "))
+        };
+        issues.push(format!(
+            "missing normalization tensor \
+             'model.layers.0.input_layernorm.weight'{hint}"
+        ));
+    }
+    if !has_layer0("post_attention_layernorm.weight")
+        && !has_layer0("pre_feedforward_layernorm.weight")
+    {
+        has_issues = true;
+        issues.push(
+            "missing normalization tensor \
+             'model.layers.0.post_attention_layernorm.weight'"
+                .into(),
+        );
+    }
+
+    // --- Final norm ---
+    if !has("model.norm.weight") {
+        has_issues = true;
+        let found: Vec<&str> = tensor_names
+            .iter()
+            .filter(|n| {
+                (n.contains("ln_f") || n.contains("final_layer_norm") || n.contains("ln_out"))
+                    && n.ends_with(".weight")
+            })
+            .take(2)
+            .map(String::as_str)
+            .collect();
+        let hint = if found.is_empty() {
+            String::new()
+        } else {
+            format!("; found final-norm-like tensors: {}", found.join(", "))
+        };
+        issues.push(format!(
+            "missing final norm tensor 'model.norm.weight'{hint}"
+        ));
+    }
+
+    // --- Attention projections ---
+    let has_separate_attn = has_layer0("self_attn.q_proj.weight");
+    let has_fused_attn = has_layer0("self_attn.qkv_proj.weight");
+    if !has_separate_attn && !has_fused_attn {
+        has_issues = true;
+        let found = find_matching("attn", 4);
+        let hint = if found.is_empty() {
+            String::new()
+        } else {
+            format!("; found attention-like tensors: {}", found.join(", "))
+        };
+        issues.push(format!(
+            "missing attention projections: expected \
+             'self_attn.q_proj.weight' or 'self_attn.qkv_proj.weight'{hint}"
+        ));
+    }
+
+    // --- MLP projections ---
+    let has_gated_separate = has_layer0("mlp.gate_proj.weight");
+    let has_gated_fused = has_layer0("mlp.gate_up_proj.weight");
+    let has_plain = has_layer0("mlp.c_fc.weight");
+    // Also accept down_proj as evidence of a recognized MLP
+    let has_down = has_layer0("mlp.down_proj.weight");
+    if !has_gated_separate && !has_gated_fused && !has_plain && !has_down {
+        has_issues = true;
+        let found: Vec<&str> = tensor_names
+            .iter()
+            .filter(|n| n.contains("mlp") || n.contains("ffn") || n.contains("fc"))
+            .take(4)
+            .map(String::as_str)
+            .collect();
+        let hint = if found.is_empty() {
+            String::new()
+        } else {
+            format!("; found MLP-like tensors: {}", found.join(", "))
+        };
+        issues.push(format!(
+            "missing MLP projections: expected 'mlp.gate_proj.weight', \
+             'mlp.gate_up_proj.weight', or 'mlp.c_fc.weight'{hint}"
+        ));
+    }
+
+    // --- LM head ---
+    let tie = config
+        .get("tie_word_embeddings")
+        .and_then(Value::as_bool)
+        .unwrap_or_else(|| !tensor_names.iter().any(|n| n == "lm_head.weight"));
+    if !tie && !has("lm_head.weight") {
+        issues.push("tie_word_embeddings is false but 'lm_head.weight' tensor is missing".into());
+    }
+
+    has_issues
+}
+
+/// Detect known non-standard weight naming conventions and produce a
+/// human-readable hint explaining why the model is incompatible.
+///
+/// Returns `None` if the naming convention is unrecognized.
+fn detect_naming_convention(tensor_names: &[String]) -> Option<String> {
+    // Known non-standard prefix patterns
+    let patterns: &[(&str, &str)] = &[
+        (
+            "transformer.h.",
+            "GPT-2 / GPT-J / GPT-NeoX (uses 'transformer.h.{i}' prefix)",
+        ),
+        (
+            "transformer.blocks.",
+            "Falcon / MPT (uses 'transformer.blocks.{i}' prefix)",
+        ),
+        (
+            "gpt_neox.layers.",
+            "GPT-NeoX / Pythia (uses 'gpt_neox.layers.{i}' prefix)",
+        ),
+        (
+            "transformer.layer.",
+            "BLOOM (uses 'transformer.layer.{i}' prefix)",
+        ),
+    ];
+
+    for &(prefix, description) in patterns {
+        if tensor_names.iter().any(|n| n.starts_with(prefix)) {
+            return Some(format!(
+                "this model uses {description} — candle-mi currently requires \
+                 HF-standard 'model.layers.{{i}}' weight naming. \
+                 Support for this architecture is planned in Phase 9 \
+                 (tensor name remapping)"
+            ));
+        }
+    }
+
+    // If no known pattern matched, show the first few tensor names as a
+    // diagnostic aid
+    if !tensor_names.iter().any(|n| n.starts_with("model.layers.")) {
+        let sample: Vec<&str> = tensor_names.iter().take(5).map(String::as_str).collect();
+        return Some(format!(
+            "weight tensors use an unrecognized naming convention \
+             (first 5: {}). candle-mi expects 'model.layers.{{i}}.self_attn.*' / \
+             'model.layers.{{i}}.mlp.*' naming",
+            sample.join(", ")
+        ));
+    }
+
+    None
 }
 
 // ---------------------------------------------------------------------------
@@ -1867,6 +2004,117 @@ mod tests {
         assert!(
             msg.contains("not compatible with GenericTransformer"),
             "error should explain incompatibility: {msg}"
+        );
+    }
+
+    #[test]
+    fn compatibility_check_shows_gpt2_naming_hint() {
+        let json = serde_json::json!({
+            "model_type": "gpt2",
+            "hidden_size": 768,
+            "num_hidden_layers": 12,
+            "num_attention_heads": 12,
+            "intermediate_size": 3072,
+            "vocab_size": 50257
+        });
+        let names = tensor_names(&[
+            "transformer.wte.weight",
+            "transformer.wpe.weight",
+            "transformer.h.0.ln_1.weight",
+            "transformer.h.0.attn.c_attn.weight",
+            "transformer.h.0.mlp.c_fc.weight",
+            "transformer.ln_f.weight",
+        ]);
+        let report = TransformerConfig::check_auto_compatibility(&json, &names);
+        assert!(!report.compatible);
+        // Should detect GPT-2 naming
+        assert!(
+            report.issues.iter().any(|i| i.contains("GPT-2")),
+            "should detect GPT-2 naming convention: {:?}",
+            report.issues
+        );
+        // Should show found embedding-like tensors
+        assert!(
+            report
+                .issues
+                .iter()
+                .any(|i| i.contains("transformer.wte.weight")),
+            "should show found embedding tensor: {:?}",
+            report.issues
+        );
+        // Should show found attention-like tensors
+        assert!(
+            report.issues.iter().any(|i| i.contains("c_attn")),
+            "should show found attention tensor: {:?}",
+            report.issues
+        );
+    }
+
+    #[test]
+    fn compatibility_check_shows_found_tensors_for_unknown_naming() {
+        let json = serde_json::json!({
+            "model_type": "custom_arch",
+            "hidden_size": 512,
+            "num_hidden_layers": 6,
+            "num_attention_heads": 8,
+            "intermediate_size": 2048,
+            "vocab_size": 30000
+        });
+        let names = tensor_names(&[
+            "encoder.layer.0.attention.query.weight",
+            "encoder.layer.0.attention.key.weight",
+            "encoder.layer.0.ffn.dense.weight",
+            "encoder.embeddings.weight",
+        ]);
+        let report = TransformerConfig::check_auto_compatibility(&json, &names);
+        assert!(!report.compatible);
+        // Should show the unrecognized naming hint with sample tensors
+        assert!(
+            report
+                .issues
+                .iter()
+                .any(|i| i.contains("unrecognized naming convention")),
+            "should flag unrecognized naming: {:?}",
+            report.issues
+        );
+        // Should show found embedding-like tensor
+        assert!(
+            report
+                .issues
+                .iter()
+                .any(|i| i.contains("encoder.embeddings.weight")),
+            "should show found embedding: {:?}",
+            report.issues
+        );
+    }
+
+    #[test]
+    fn compatibility_check_shows_found_norm_tensors() {
+        // A model with HF-standard layer prefix but non-standard norm names
+        let json = serde_json::json!({
+            "model_type": "custom",
+            "hidden_size": 2048,
+            "num_hidden_layers": 16,
+            "num_attention_heads": 32,
+            "intermediate_size": 8192,
+            "vocab_size": 32000,
+            "tie_word_embeddings": true
+        });
+        let names = tensor_names(&[
+            "model.embed_tokens.weight",
+            "model.layers.0.self_attn.q_proj.weight",
+            "model.layers.0.mlp.gate_proj.weight",
+            "model.layers.0.attention_norm.weight",
+            "model.layers.0.ffn_norm.weight",
+            "model.final_norm.weight",
+        ]);
+        let report = TransformerConfig::check_auto_compatibility(&json, &names);
+        assert!(!report.compatible);
+        // Should show the alternative norm tensors that were found
+        assert!(
+            report.issues.iter().any(|i| i.contains("attention_norm")),
+            "should show found norm tensors: {:?}",
+            report.issues
         );
     }
 }
