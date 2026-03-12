@@ -19,15 +19,21 @@
 //! (plip-rs, anacrousis branch) for the full 28-condition experiment.
 //!
 //! ```bash
-//! # Default: Llama 3.2 1B, layers 8-15, strength 2.0, prefill-only
+//! # Default: Llama 3.2 1B, layers 8-15, strength 2.0, depth 2, prefill-only
 //! cargo run --release --features transformer --example recurrent_feedback
+//!
+//! # Deeper recurrence (3 passes through the loop layers)
+//! cargo run --release --features transformer --example recurrent_feedback -- --depth 3
 //!
 //! # Sustained feedback (applied at every generation step)
 //! cargo run --release --features transformer --example recurrent_feedback -- --sustained
 //!
-//! # Custom layer range and strength
+//! # Custom layer range, strength, and depth
 //! cargo run --release --features transformer --example recurrent_feedback -- \
-//!     --loop-start 14 --loop-end 15 --strength 1.0 --sustained
+//!     --loop-start 14 --loop-end 15 --strength 1.0 --depth 4 --sustained
+//!
+//! # Rhyme-token rank diagnostic at the planning position
+//! cargo run --release --features transformer --example recurrent_feedback -- --diagnose
 //!
 //! # With JSON output
 //! cargo run --release --features transformer --example recurrent_feedback -- \
@@ -76,6 +82,12 @@ struct Args {
     #[arg(long, default_value_t = 2.0)]
     strength: f32,
 
+    /// Recurrence depth: total number of passes through the loop layers.
+    /// 1 = no recurrence (single pass), 2 = default (one recurrent pass),
+    /// 3+ = deeper recurrence.
+    #[arg(long, default_value_t = 2)]
+    depth: usize,
+
     /// Apply feedback at every generation step (sustained mode)
     #[arg(long)]
     sustained: bool,
@@ -83,6 +95,10 @@ struct Args {
     /// Maximum number of couplets to test (default: all 15)
     #[arg(long)]
     max_couplets: Option<usize>,
+
+    /// Show rhyme-token rank analysis at the planning position
+    #[arg(long)]
+    diagnose: bool,
 
     /// Write structured JSON output to this file
     #[arg(long)]
@@ -100,6 +116,7 @@ struct JsonOutput {
     hidden_size: usize,
     loop_start: usize,
     loop_end: usize,
+    depth: usize,
     strength: f32,
     mode: String,
     baseline_rhymes: usize,
@@ -310,7 +327,7 @@ fn run() -> candle_mi::Result<()> {
         &candle_core::Device::cuda_if_available(0).unwrap_or(candle_core::Device::Cpu),
     )?;
 
-    let (model, tokenizer, _config) = load_transformer(&args.model)?;
+    let (model, tokenizer, _config, eos_tokens) = load_transformer(&args.model)?;
     let load_time = t0.elapsed();
 
     let n_layers = model.num_layers();
@@ -331,6 +348,7 @@ fn run() -> candle_mi::Result<()> {
 
     println!();
     println!("  Recurrent layers: {}–{}", args.loop_start, args.loop_end);
+    println!("  Depth:     {}", args.depth);
     println!("  Strength:  {:.1}", args.strength);
     println!("  Mode:      {mode}");
     println!();
@@ -342,11 +360,12 @@ fn run() -> candle_mi::Result<()> {
     let couplets = couplets.get(..limit).unwrap_or(&couplets);
 
     let max_tokens: usize = 30;
-    #[allow(clippy::unreadable_literal)]
-    let stop_tokens: Vec<u32> = vec![
-        128001, // <|end_of_text|>
-        128009, // <|eot_id|>
-    ];
+    let stop_tokens = if eos_tokens.is_empty() {
+        eprintln!("  Warning: no eos_token_id in config.json; using LLaMA defaults");
+        vec![128_001_u32, 128_009]
+    } else {
+        eos_tokens
+    };
 
     // --- Run experiment ---
     println!(
@@ -387,6 +406,7 @@ fn run() -> candle_mi::Result<()> {
         // --- Recurrent generation ---
         let rhyme_dir = averaged_rhyme_direction(&model, &tokenizer, couplet.rhyme_family)?;
         let mut spec = RecurrentPassSpec::no_feedback(args.loop_start, args.loop_end)
+            .with_depth(args.depth)
             .with_sustained(args.sustained);
         spec.add_feedback(planning_pos, rhyme_dir, args.strength);
 
@@ -419,6 +439,62 @@ fn run() -> candle_mi::Result<()> {
             result,
             recurrent_line.trim()
         );
+
+        // --- Diagnostic: rhyme-token rank analysis at the planning position ---
+        if args.diagnose {
+            let rhyme_ids = rhyme_word_token_ids(&tokenizer, couplet.rhyme_family)?;
+            let input_tensor = Tensor::new(prompt_ids.as_slice(), &device)?.unsqueeze(0)?;
+
+            // Baseline logits at planning position
+            let base_cache = model.forward(&input_tensor, &HookSpec::new())?;
+            let base_logits = base_cache.output();
+            let base_last = base_logits
+                .i((.., planning_pos, ..))?
+                .squeeze(0)?
+                .squeeze(0)?;
+            let base_ranks = rank_rhyme_tokens(&base_last, &rhyme_ids)?;
+
+            // Recurrent logits at planning position
+            let rec_cache = model.forward_recurrent(&input_tensor, &HookSpec::new(), &spec)?;
+            let rec_logits = rec_cache.output();
+            let rec_last = rec_logits
+                .i((.., planning_pos, ..))?
+                .squeeze(0)?
+                .squeeze(0)?;
+            let rec_ranks = rank_rhyme_tokens(&rec_last, &rhyme_ids)?;
+
+            println!(
+                "       baseline: best rhyme \"{}\", rank {:>5}, prob {:.6}, top-100: {}",
+                base_ranks.best_word,
+                base_ranks.best_rank + 1,
+                base_ranks.best_prob,
+                base_ranks.in_top_100
+            );
+            println!(
+                "       recurrent: best rhyme \"{}\", rank {:>5}, prob {:.6}, top-100: {}",
+                rec_ranks.best_word,
+                rec_ranks.best_rank + 1,
+                rec_ranks.best_prob,
+                rec_ranks.in_top_100
+            );
+            // CAST: usize → isize, ranks are small enough
+            #[allow(clippy::as_conversions, clippy::cast_possible_wrap)]
+            let rank_delta = base_ranks.best_rank as isize - rec_ranks.best_rank as isize;
+            match rank_delta.cmp(&0) {
+                std::cmp::Ordering::Greater => {
+                    println!("       → nudge improved best rhyme rank by {rank_delta} positions");
+                }
+                std::cmp::Ordering::Less => {
+                    println!(
+                        "       → nudge worsened best rhyme rank by {} positions",
+                        rank_delta.unsigned_abs()
+                    );
+                }
+                std::cmp::Ordering::Equal => {
+                    println!("       → no rank change");
+                }
+            }
+        }
 
         json_couplets.push(JsonCouplet {
             id: couplet.id,
@@ -463,6 +539,7 @@ fn run() -> candle_mi::Result<()> {
             model.hidden_size(),
             args.loop_start,
             args.loop_end,
+            args.depth,
             args.strength,
             mode,
             baseline_rhymes,
@@ -483,7 +560,7 @@ fn run() -> candle_mi::Result<()> {
 
 fn load_transformer(
     model_id: &str,
-) -> candle_mi::Result<(GenericTransformer, MITokenizer, TransformerConfig)> {
+) -> candle_mi::Result<(GenericTransformer, MITokenizer, TransformerConfig, Vec<u32>)> {
     // BORROW: explicit .to_owned() — &str → String for download API
     let files = hf_fetch_model::download_files_blocking(model_id.to_owned())
         .map(hf_fetch_model::DownloadOutcome::into_inner)
@@ -499,6 +576,9 @@ fn load_transformer(
 
     let config = TransformerConfig::from_hf_config(&json)?;
 
+    // Extract eos_token_id(s) from config.json — can be a single int or an array
+    let eos_tokens = parse_eos_token_ids(&json);
+
     let device = candle_core::Device::cuda_if_available(0).map_err(candle_mi::MIError::Model)?;
     let dtype = DType::F32;
 
@@ -512,7 +592,30 @@ fn load_transformer(
         .ok_or_else(|| candle_mi::MIError::Tokenizer("tokenizer.json not found".into()))?;
     let tokenizer = MITokenizer::from_hf_path(tokenizer_path)?;
 
-    Ok((model, tokenizer, config))
+    Ok((model, tokenizer, config, eos_tokens))
+}
+
+/// Parse `eos_token_id` from a HuggingFace `config.json` value.
+///
+/// Handles both single-integer and array-of-integers formats.
+/// Returns an empty `Vec` if the field is absent or unparseable.
+fn parse_eos_token_ids(json: &serde_json::Value) -> Vec<u32> {
+    match json.get("eos_token_id") {
+        Some(serde_json::Value::Number(n)) => {
+            // CAST: u64 → u32, token IDs fit in u32 (vocab sizes < 2^32)
+            #[allow(clippy::as_conversions, clippy::cast_possible_truncation)]
+            n.as_u64().map_or_else(Vec::new, |id| vec![id as u32])
+        }
+        Some(serde_json::Value::Array(arr)) => arr
+            .iter()
+            .filter_map(|v| {
+                // CAST: u64 → u32, token IDs fit in u32 (vocab sizes < 2^32)
+                #[allow(clippy::as_conversions, clippy::cast_possible_truncation)]
+                v.as_u64().map(|id| id as u32)
+            })
+            .collect(),
+        _ => Vec::new(),
+    }
 }
 
 /// Resolve safetensors file paths from a downloaded file map.
@@ -599,6 +702,7 @@ fn write_json_output(
     hidden_size: usize,
     loop_start: usize,
     loop_end: usize,
+    depth: usize,
     strength: f32,
     mode: &str,
     baseline_rhymes: usize,
@@ -612,6 +716,7 @@ fn write_json_output(
         hidden_size,
         loop_start,
         loop_end,
+        depth,
         strength,
         mode: mode.into(),
         baseline_rhymes,
@@ -714,9 +819,107 @@ fn extract_last_word(text: &str) -> String {
 /// Rough estimate of F32 weight memory in MB.
 #[allow(clippy::cast_precision_loss, clippy::as_conversions)]
 fn estimate_weight_mb(n_layers: usize, hidden: usize) -> f64 {
+    // CAST: usize → f64, values are small enough for exact representation
     let params_per_layer = 12.0 * (hidden as f64) * (hidden as f64);
+    // CAST: usize → f64, values are small enough for exact representation
     let total_params = (n_layers as f64) * params_per_layer;
     total_params * 4.0 / 1_000_000.0
+}
+
+// ---------------------------------------------------------------------------
+// Diagnostic: rhyme-token rank analysis at the planning position
+// ---------------------------------------------------------------------------
+
+/// Result of checking rhyme token ranks in the logit distribution.
+struct RhymeRankResult {
+    /// Best (lowest) rank among all rhyme family tokens.
+    best_rank: usize,
+    /// The rhyme word with the best rank.
+    best_word: String,
+    /// Probability of the best-ranked rhyme token (softmax).
+    best_prob: f32,
+    /// Number of rhyme tokens found in top 100.
+    in_top_100: usize,
+}
+
+/// Map rhyme family words to their token IDs.
+///
+/// Returns `(token_id, word)` pairs for words that tokenize to a single
+/// token (with a leading space, as they'd appear mid-sentence).
+fn rhyme_word_token_ids(
+    tokenizer: &MITokenizer,
+    rhyme_words: &[&str],
+) -> candle_mi::Result<Vec<(u32, String)>> {
+    let mut pairs = Vec::new();
+    for word in rhyme_words {
+        let with_space = format!(" {word}");
+        let ids = tokenizer.encode_raw(&with_space)?;
+        // Only use words that tokenize to a single token (the space + word)
+        if let [single] = ids.as_slice() {
+            pairs.push((*single, (*word).to_lowercase()));
+        } else if let Some(&last) = ids.last() {
+            // Multi-token: use the last subword as a proxy
+            pairs.push((last, (*word).to_lowercase()));
+        }
+    }
+    Ok(pairs)
+}
+
+/// Compute ranks of rhyme tokens in a logit distribution.
+///
+/// `logits` should be a flat `[vocab_size]` tensor.
+#[allow(clippy::cast_precision_loss, clippy::as_conversions)]
+fn rank_rhyme_tokens(
+    logits: &Tensor,
+    rhyme_token_ids: &[(u32, String)],
+) -> candle_mi::Result<RhymeRankResult> {
+    // PROMOTE: ensure F32 for softmax
+    let logits_f32 = logits.to_dtype(DType::F32)?;
+    let probs = candle_nn::ops::softmax(&logits_f32, 0)?;
+    let probs_vec: Vec<f32> = probs.to_vec1()?;
+
+    // Build (index, prob) and sort descending by probability
+    let mut indexed: Vec<(usize, f32)> = probs_vec.iter().copied().enumerate().collect();
+    indexed.sort_by(|a, b| b.1.partial_cmp(&a.1).unwrap_or(std::cmp::Ordering::Equal));
+
+    // Build rank lookup: token_id → rank (0-based)
+    let mut rank_of = vec![0_usize; probs_vec.len()];
+    for (rank, &(idx, _)) in indexed.iter().enumerate() {
+        if let Some(slot) = rank_of.get_mut(idx) {
+            *slot = rank;
+        }
+    }
+
+    let mut best_rank = usize::MAX;
+    let mut best_word = String::new();
+    let mut best_prob = 0.0_f32;
+    let mut in_top_100 = 0_usize;
+
+    for (token_id, word) in rhyme_token_ids {
+        // CAST: u32 → usize, token IDs are always valid vocab indices
+        let tid = *token_id as usize;
+        if let (Some(&r), Some(&p)) = (rank_of.get(tid), probs_vec.get(tid)) {
+            if r < best_rank {
+                best_rank = r;
+                best_word.clone_from(word);
+                best_prob = p;
+            }
+            if r < 100 {
+                in_top_100 += 1;
+            }
+        }
+    }
+
+    if best_rank == usize::MAX {
+        best_rank = probs_vec.len();
+    }
+
+    Ok(RhymeRankResult {
+        best_rank,
+        best_word,
+        best_prob,
+        in_top_100,
+    })
 }
 
 /// Check if a word matches any member of the rhyme family.

@@ -9,7 +9,7 @@
 //!
 //! Two modes are supported:
 //!
-//! - **Prefill-only** (`sustained: false`): the recurrent double-pass applies
+//! - **Prefill-only** (`sustained: false`): the recurrent multi-pass applies
 //!   at every step (since candle-mi recomputes from scratch without KV cache),
 //!   but feedback is injected only at the original prompt positions.
 //!
@@ -17,6 +17,10 @@
 //!   positions, feedback is also injected at the current last token at each
 //!   autoregressive step — the transformer analog of the DRC's per-tick
 //!   recurrence (Taufeeque et al., 2024).
+//!
+//! The `depth` parameter (default 2) controls how many times the recurrent
+//! layer block is executed. Higher depths give the model more iterations to
+//! propagate planning signals, at the cost of proportionally more compute.
 
 use candle_core::Tensor;
 
@@ -44,28 +48,36 @@ pub struct RecurrentFeedbackEntry {
 // RecurrentPassSpec
 // ---------------------------------------------------------------------------
 
-/// Specification for a recurrent (double-pass) forward through a layer block.
+/// Specification for a recurrent multi-pass forward through a layer block.
 ///
-/// The recurrence re-runs layers `loop_start..=loop_end` a second time,
-/// with optional feedback injected into the hidden state between passes.
+/// The recurrence re-runs layers `loop_start..=loop_end` a total of `depth`
+/// times, with optional feedback injected into the hidden state between
+/// passes.
 ///
 /// # Without feedback
 ///
-/// Pass 2 receives pass 1's output (true recurrence — extra depth).
+/// Each subsequent pass receives the previous pass's output (true
+/// recurrence — extra depth).
 ///
 /// # With feedback
 ///
-/// Pass 2 receives the saved pre-loop hidden state plus feedback vectors:
-/// `hidden[position] += strength * vector`.
+/// Each subsequent pass resets to the saved pre-loop hidden state plus
+/// feedback vectors: `hidden[position] += strength * vector`.
+/// This means every recurrent pass sees the same clean input with the
+/// nudge applied — the layers process `H₀ + nudge` rather than
+/// iterating on their own output, which would cause degeneration.
 #[derive(Debug, Clone)]
 pub struct RecurrentPassSpec {
     /// First layer of the recurrent block (inclusive).
     pub loop_start: usize,
     /// Last layer of the recurrent block (inclusive).
     pub loop_end: usize,
-    /// Feedback vectors to inject between pass 1 and pass 2.
+    /// Feedback vectors to inject between passes.
     ///
-    /// If empty, pass 2 receives the pass 1 output (pure depth increase).
+    /// When present, each recurrent pass resets to the saved pre-loop state
+    /// and injects these vectors before re-running the loop layers.
+    /// If empty, each pass receives the previous pass's output unmodified
+    /// (pure depth increase).
     pub feedback: Vec<RecurrentFeedbackEntry>,
     /// If true, also inject feedback at the current last token position
     /// during each autoregressive generation step (sustained recurrence).
@@ -73,10 +85,15 @@ pub struct RecurrentPassSpec {
     /// If false, feedback is only injected at the original prompt positions
     /// (prefill-only recurrence).
     pub sustained: bool,
+    /// Number of times to run the recurrent layer block.
+    ///
+    /// Must be at least 1 (a single pass, no recurrence). The default is 2
+    /// (one initial pass plus one recurrent pass with feedback injection).
+    pub depth: usize,
 }
 
 impl RecurrentPassSpec {
-    /// Create a spec with no feedback (pure double-pass).
+    /// Create a spec with no feedback (pure double-pass, depth 2).
     #[must_use]
     pub const fn no_feedback(loop_start: usize, loop_end: usize) -> Self {
         Self {
@@ -84,6 +101,7 @@ impl RecurrentPassSpec {
             loop_end,
             feedback: Vec::new(),
             sustained: false,
+            depth: 2,
         }
     }
 
@@ -91,6 +109,17 @@ impl RecurrentPassSpec {
     #[must_use]
     pub const fn with_sustained(mut self, sustained: bool) -> Self {
         self.sustained = sustained;
+        self
+    }
+
+    /// Set the recurrence depth (builder pattern).
+    ///
+    /// `depth` is the total number of times the recurrent layer block is
+    /// executed. The default is 2 (one initial pass plus one recurrent
+    /// pass). A depth of 1 means no recurrence (single pass).
+    #[must_use]
+    pub const fn with_depth(mut self, depth: usize) -> Self {
+        self.depth = depth;
         self
     }
 
@@ -111,6 +140,9 @@ impl RecurrentPassSpec {
     /// feedback positions exceed sequence length, or feedback vectors
     /// have the wrong dimension.
     pub fn validate(&self, n_layers: usize, seq_len: usize, d_model: usize) -> Result<()> {
+        if self.depth == 0 {
+            return Err(MIError::Intervention("depth must be >= 1 (got 0)".into()));
+        }
         if self.loop_start > self.loop_end {
             return Err(MIError::Intervention(format!(
                 "loop_start ({}) > loop_end ({})",
@@ -206,6 +238,32 @@ mod tests {
         let err = spec.validate(16, 10, 2048);
         assert!(err.is_err());
         assert!(err.unwrap_err().to_string().contains("position"));
+    }
+
+    #[test]
+    fn default_depth_is_two() {
+        let spec = RecurrentPassSpec::no_feedback(14, 15);
+        assert_eq!(spec.depth, 2);
+    }
+
+    #[test]
+    fn with_depth_builder() {
+        let spec = RecurrentPassSpec::no_feedback(14, 15).with_depth(4);
+        assert_eq!(spec.depth, 4);
+    }
+
+    #[test]
+    fn validate_depth_zero() {
+        let spec = RecurrentPassSpec::no_feedback(14, 15).with_depth(0);
+        let err = spec.validate(16, 10, 2048);
+        assert!(err.is_err());
+        assert!(err.unwrap_err().to_string().contains("depth"));
+    }
+
+    #[test]
+    fn validate_depth_one() {
+        let spec = RecurrentPassSpec::no_feedback(14, 15).with_depth(1);
+        assert!(spec.validate(16, 10, 2048).is_ok());
     }
 
     #[test]

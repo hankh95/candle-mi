@@ -413,8 +413,8 @@ impl GenericTransformer {
 
     /// Forward pass with recurrent re-execution of a layer block.
     ///
-    /// Re-runs layers `spec.loop_start..=spec.loop_end` a second time,
-    /// with optional feedback injected between passes.
+    /// Runs layers `spec.loop_start..=spec.loop_end` a total of `spec.depth`
+    /// times, with optional feedback injected between passes.
     ///
     /// # Algorithm
     ///
@@ -422,15 +422,16 @@ impl GenericTransformer {
     /// embed → layers[0..loop_start)
     ///   → save_input (if feedback)
     ///   → layers[loop_start..=loop_end]  (pass 1)
-    ///   → if feedback: hidden = saved_input + feedback entries
-    ///     else:        hidden = pass 1 output (true recurrence)
-    ///   → layers[loop_start..=loop_end]  (pass 2)
+    ///   → for pass 2..depth:
+    ///       if feedback: hidden = saved_input + feedback entries
+    ///       else:        hidden = previous pass output (true recurrence)
+    ///       layers[loop_start..=loop_end]
     ///   → layers[(loop_end+1)..n_layers)
     ///   → norm → logits
     /// ```
     ///
-    /// Hooks fire at every layer in every pass. For loop layers, pass 2
-    /// captures overwrite pass 1 in the [`HookCache`].
+    /// Hooks fire at every layer in every pass. For loop layers, later pass
+    /// captures overwrite earlier ones in the [`HookCache`].
     ///
     /// # Shapes
     /// - `input_ids`: `[batch, seq]`
@@ -483,28 +484,29 @@ impl GenericTransformer {
             &mut cache,
         )?;
 
-        // Determine pass 2 input
-        if let Some(saved) = saved_input {
-            // With feedback: inject into saved pre-loop state
-            hidden = saved;
-            for entry in &spec.feedback {
-                let scaled = (&entry.vector * f64::from(entry.strength))?;
-                hidden = inject_feedback_at_position(&hidden, &scaled, entry.position)?;
+        // Recurrent passes 2..depth
+        for _pass in 1..spec.depth {
+            if let Some(ref saved) = saved_input {
+                // With feedback: reset to saved pre-loop state + inject
+                hidden = saved.clone();
+                for entry in &spec.feedback {
+                    let scaled = (&entry.vector * f64::from(entry.strength))?;
+                    hidden = inject_feedback_at_position(&hidden, &scaled, entry.position)?;
+                }
             }
-        }
-        // Without feedback: hidden stays as pass 1 output (true recurrence)
+            // Without feedback: hidden stays as previous pass output (true recurrence)
 
-        // Pass 2 through loop layers
-        hidden = self.forward_layer_range(
-            hidden,
-            spec.loop_start,
-            spec.loop_end + 1,
-            seq_len,
-            device,
-            dtype,
-            hooks,
-            &mut cache,
-        )?;
+            hidden = self.forward_layer_range(
+                hidden,
+                spec.loop_start,
+                spec.loop_end + 1,
+                seq_len,
+                device,
+                dtype,
+                hooks,
+                &mut cache,
+            )?;
+        }
 
         // Post-loop layers
         hidden = self.forward_layer_range(
@@ -528,7 +530,7 @@ impl GenericTransformer {
     /// Generate tokens with recurrent re-execution.
     ///
     /// Since candle-mi recomputes the full sequence at every step (no KV
-    /// cache), the recurrent double-pass applies at every generation step.
+    /// cache), the recurrent multi-pass applies at every generation step.
     ///
     /// - **Prefill-only** (`sustained: false`): feedback at original
     ///   prompt positions only.
