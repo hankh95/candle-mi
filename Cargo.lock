@@ -339,6 +339,7 @@ dependencies = [
  "candle-nn",
  "clap",
  "hf-fetch-model",
+ "libloading 0.9.0",
  "linfa",
  "linfa-logistic",
  "ndarray",

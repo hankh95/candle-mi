@@ -43,6 +43,9 @@ zip = { version = "2", default-features = false, features = ["deflate"] }
 hf-fetch-model = { version = "0.7.2", features = ["indicatif"] }
 tokio = { version = "1", features = ["rt-multi-thread"] }
 
+# Optional: memory reporting (NVML FFI for per-process VRAM)
+libloading = { version = "0.9", optional = true }
+
 # Optional: probing
 ndarray = { version = "0.15", optional = true }
 linfa = { version = "0.7", optional = true }
@@ -141,7 +144,7 @@ rwkv = []
 rwkv-tokenizer = []
 clt = []
 sae = []
-memory = []
+memory = ["dep:libloading"]
 probing = ["linfa", "linfa-logistic", "ndarray"]
 
 [lints.rust]
