@@ -160,7 +160,7 @@ This is a research-first design: MI analyses need to see everything, and the per
 |-------|------------------|---------|
 | Anthropic, [*On the Biology of a Large Language Model*](https://transformer-circuits.pub/2025/attribution-graphs/biology.html) (2025) | Figure 13 — suppress natural rhyme features and inject an alternative via CLT, sweeping injection position | [`figure13_planning_poems`](examples/README.md#example-output-figure13_planning_poems) |
 | Meng et al., [*Locating and Editing Factual Associations in GPT*](https://arxiv.org/abs/2202.05262) (2022) | Causal tracing via position-specific activation patching | [`activation_patching`](examples/README.md#example-output-activation_patching) |
-| Taufeeque et al., [*Recurrent Feedback*](https://arxiv.org/abs/2407.05128) (2024) | Anacrousis — recurrent steering passes for rhyme completion | [`recurrent_feedback`](examples/README.md#example-output-recurrent_feedback) |
+| Taufeeque et al., [*Recurrent Feedback*](https://arxiv.org/abs/2407.15421) (2024) | Anacrousis — recurrent steering passes for rhyme completion | [`recurrent_feedback`](examples/README.md#example-output-recurrent_feedback) |
 
 
 ## Feature flags
