@@ -192,6 +192,12 @@ module_name_repetitions   = "allow"
 too_many_lines            = "allow"
 must_use_candidate        = "warn"      # Rule 17
 
+# docs.rs builds in a sandbox without CUDA toolkit — disable cuda, enable all
+# CPU-safe features so the generated docs cover the full public API surface.
+[package.metadata.docs.rs]
+no-default-features = true
+features = ["transformer", "rwkv", "rwkv-tokenizer", "clt", "sae", "mmap", "memory", "probing"]
+
 [profile.release]
 lto = true
 codegen-units = 1

@@ -917,11 +917,11 @@ impl CrossLayerTranscoder {
 
     // --- Injection ---
 
-    /// Build a [`HookSpec`] that injects CLT decoder vectors into the residual stream.
+    /// Build a [`crate::HookSpec`] that injects CLT decoder vectors into the residual stream.
     ///
     /// Groups cached steering vectors by target layer, accumulates them per layer,
-    /// scales by `strength`, and creates [`Intervention::Add`] entries on
-    /// [`HookPoint::ResidPost`] for each target layer. The resulting `HookSpec`
+    /// scales by `strength`, and creates [`crate::Intervention::Add`] entries on
+    /// [`crate::HookPoint::ResidPost`] for each target layer. The resulting `HookSpec`
     /// can be passed directly to [`MIModel::forward()`](crate::MIModel::forward).
     ///
     /// # Shapes

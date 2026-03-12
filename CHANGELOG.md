@@ -7,6 +7,44 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+### Added
+
+- **Recurrent feedback depth** — `RecurrentSpec::depth` field generalizes
+  recurrent re-execution from hardcoded 2 passes to configurable N passes;
+  updated `forward_recurrent()` and `recurrent_feedback` example accordingly
+
+### Changed
+
+- **README overhaul** — added supported model families table, hardware
+  statement, RWKV callout, "See it in action" section with logit lens and
+  CLT flagship examples, hook point definition, Quick Start with hooks,
+  Paper Replications table, Design Philosophy section, and measured
+  GPU/CPU timing
+- **BACKENDS.md** — added "What failure looks like" subsection with three
+  runnable auto-config commands (success, weight mismatch, unsupported arch)
+- **VRAM measurement upgraded to per-process** (`src/memory.rs`) — replaced
+  `nvidia-smi` subprocess with direct NVML FFI via `libloading`; dynamically
+  loads `nvml.dll` (Windows) or `libnvidia-ml.so.1` (Linux) at runtime and
+  calls `nvmlDeviceGetComputeRunningProcesses` to get true per-process GPU
+  memory; falls back to `nvidia-smi` (device-wide) if NVML is unavailable;
+  new `MemorySnapshot::vram_per_process` field indicates measurement quality;
+  `MemoryReport::print_delta` and `print_before_after` now append
+  `[per-process]` or `[device-wide]` qualifier; added `libloading` as an
+  optional dependency behind `features = ["memory"]`; zero new crate
+  dependencies when the feature is off; no changes to the public API surface
+  (all examples work without modification)
+
+### Fixed
+
+- **Broken intra-doc links in `clt` module** — added `crate::` prefix to
+  `HookSpec`, `HookPoint::ResidPost`, and `Intervention::Add` doc links
+  in `src/clt/mod.rs` that failed under `--no-default-features` builds
+- **docs.rs build** — added `[package.metadata.docs.rs]` to `Cargo.toml`
+  with `no-default-features = true` and all CPU-safe features enabled;
+  the docs.rs sandbox lacks the CUDA toolkit (`nvcc`), so the default
+  `cuda` feature caused `cudarc` build script failures; docs will build
+  correctly on the next crates.io publish
+
 ## [0.1.0] - 2026-03-11
 
 ### Added
