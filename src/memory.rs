@@ -189,10 +189,11 @@ impl MemoryReport {
                 format!(" / {:.0} MB", t as f64 / 1_048_576.0)
             });
             let qualifier = self.vram_qualifier();
-            let gpu = self.after.gpu_name.as_deref().map_or(
-                String::new(),
-                |name| format!(" [{name}]"),
-            );
+            let gpu = self
+                .after
+                .gpu_name
+                .as_deref()
+                .map_or(String::new(), |name| format!(" [{name}]"));
             println!(
                 "  {label}: VRAM {before:.0} MB → {after:.0} MB ({:+.0} MB{total}){qualifier}{gpu}",
                 after - before,
@@ -642,11 +643,11 @@ fn nvidia_smi_query() -> (Option<u64>, Option<u64>) {
 #[cfg(windows)]
 #[allow(unsafe_code)]
 fn dxgi_query_process_vram() -> Option<GpuMemoryResult> {
-    use windows::core::Interface;
     use windows::Win32::Graphics::Dxgi::{
-        CreateDXGIFactory1, IDXGIAdapter, IDXGIAdapter3, IDXGIFactory1,
-        DXGI_MEMORY_SEGMENT_GROUP_LOCAL, DXGI_QUERY_VIDEO_MEMORY_INFO,
+        CreateDXGIFactory1, DXGI_MEMORY_SEGMENT_GROUP_LOCAL, DXGI_QUERY_VIDEO_MEMORY_INFO,
+        IDXGIAdapter, IDXGIAdapter3, IDXGIFactory1,
     };
+    use windows::core::Interface;
 
     // SAFETY: CreateDXGIFactory1 is a well-documented COM factory function.
     // It initializes COM internally if needed. The returned IDXGIFactory1
@@ -682,11 +683,7 @@ fn dxgi_query_process_vram() -> Option<GpuMemoryResult> {
         // DXGI_MEMORY_SEGMENT_GROUP_LOCAL = dedicated VRAM on discrete GPUs.
         let mut mem_info = DXGI_QUERY_VIDEO_MEMORY_INFO::default();
         unsafe {
-            adapter3.QueryVideoMemoryInfo(
-                0,
-                DXGI_MEMORY_SEGMENT_GROUP_LOCAL,
-                &raw mut mem_info,
-            )
+            adapter3.QueryVideoMemoryInfo(0, DXGI_MEMORY_SEGMENT_GROUP_LOCAL, &raw mut mem_info)
         }
         .ok()?;
 
@@ -704,11 +701,15 @@ fn dxgi_query_process_vram() -> Option<GpuMemoryResult> {
         eprintln!(
             "[DXGI debug] adapter={gpu_name}, dedicated_vram={total}, \
              current_usage={}, budget={}",
-            mem_info.CurrentUsage,
-            mem_info.Budget,
+            mem_info.CurrentUsage, mem_info.Budget,
         );
 
-        return Some((Some(mem_info.CurrentUsage), Some(total), Some(true), Some(gpu_name)));
+        return Some((
+            Some(mem_info.CurrentUsage),
+            Some(total),
+            Some(true),
+            Some(gpu_name),
+        ));
     }
 }
 
