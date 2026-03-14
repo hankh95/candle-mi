@@ -36,8 +36,8 @@
 //!   `#![deny(unsafe_code)]` for the Windows FFI calls (`K32GetProcessMemoryInfo`,
 //!   DXGI COM calls) and for NVML dynamic symbol loading via `libloading`.
 //!   On Linux RAM measurement, no unsafe code is used.
-//! - **`dxgi-debug`** (implies `memory`): Prints raw DXGI query results to
-//!   stderr for diagnosing GPU memory reporting issues.
+//! - **`memory-debug`** (implies `memory`): Prints raw DXGI query results and
+//!   per-chunk VRAM measurements to stderr for diagnosing GPU memory issues.
 
 use crate::{MIError, Result};
 
@@ -140,6 +140,68 @@ impl MemorySnapshot {
     }
 }
 
+/// Synchronize the CUDA device and trim its memory pool.
+///
+/// On a CUDA device this:
+/// 1. Calls `cuCtxSynchronize` so all pending async frees complete.
+/// 2. Calls `cuMemPoolTrimTo(pool, 0)` to release all unused reserved
+///    VRAM back to the device.
+///
+/// cudarc's stream-ordered allocator (`malloc_async` / `free_async`)
+/// keeps freed blocks in a pool for reuse. Over many forward passes
+/// with varying tensor sizes the pool grows monotonically — DXGI and
+/// `nvidia-smi` report this reserved memory as "in use", eventually
+/// causing OOM even though no live tensors need it.
+///
+/// This function is a no-op on CPU and on Metal.
+///
+/// # Example
+///
+/// ```no_run
+/// # use candle_mi::sync_and_trim_gpu;
+/// # let device = candle_core::Device::Cpu;
+/// // After dropping all GPU tensors from a forward pass:
+/// sync_and_trim_gpu(&device);
+/// ```
+pub fn sync_and_trim_gpu(device: &candle_core::Device) {
+    #[cfg(feature = "cuda")]
+    if let candle_core::Device::Cuda(cuda_dev) = device {
+        use candle_core::backend::BackendDevice;
+        // Synchronize so all pending async frees complete.
+        let _ = cuda_dev.synchronize();
+
+        // Trim the default memory pool to release all unused reserved VRAM.
+        // SAFETY: cuDeviceGetDefaultMemPool and cuMemPoolTrimTo are
+        // documented CUDA driver APIs for pool management. The CUdevice
+        // handle comes from candle's CudaContext (valid after synchronize).
+        // cuMemPoolTrimTo(pool, 0) releases all unused memory — it cannot
+        // free memory that is still in use by live tensors.
+        #[allow(unsafe_code)]
+        {
+            use candle_core::cuda_backend::cudarc::driver::sys;
+
+            let stream = cuda_dev.cuda_stream();
+            // Allocate a zero-length slice just to access the CudaContext
+            // (CudaStream.ctx is pub(crate), but CudaSlice.context() is pub).
+            if let Ok(probe) = stream.null::<u8>() {
+                let ctx = probe.context();
+                let cu_device = ctx.cu_device();
+                unsafe {
+                    let mut pool = std::mem::zeroed();
+                    let rc = sys::cuDeviceGetDefaultMemPool(&raw mut pool, cu_device);
+                    if rc == sys::CUresult::CUDA_SUCCESS {
+                        let _ = sys::cuMemPoolTrimTo(pool, 0);
+                    }
+                }
+            }
+        }
+    }
+
+    // Suppress unused-variable warning on non-CUDA builds.
+    #[cfg(not(feature = "cuda"))]
+    let _ = device;
+}
+
 impl MemoryReport {
     /// Create a report from two snapshots.
     #[must_use]
@@ -202,6 +264,7 @@ impl MemoryReport {
     }
 
     /// Return a short qualifier string indicating VRAM measurement quality.
+    #[must_use]
     const fn vram_qualifier(&self) -> &'static str {
         match self.after.vram_per_process {
             Some(true) => " [per-process]",
@@ -697,7 +760,7 @@ fn dxgi_query_process_vram() -> Option<GpuMemoryResult> {
         // BORROW: to_owned — trim returns a &str slice; we need an owned String
         let gpu_name = raw_name.trim_end_matches('\0').to_owned();
 
-        #[cfg(feature = "dxgi-debug")]
+        #[cfg(feature = "memory-debug")]
         eprintln!(
             "[DXGI debug] adapter={gpu_name}, dedicated_vram={total}, \
              current_usage={}, budget={}",

@@ -35,8 +35,8 @@
 //! # With memory reporting (GPU name, per-process VRAM before/after)
 //! cargo run --release --features transformer,mmap,memory --example character_count_helix
 //!
-//! # With DXGI debug output (raw adapter/VRAM values on stderr, Windows only)
-//! cargo run --release --features transformer,mmap,dxgi-debug --example character_count_helix
+//! # With memory debug output (DXGI info + per-chunk VRAM on stderr)
+//! cargo run --release --features transformer,mmap,memory-debug --example character_count_helix
 //! ```
 //!
 //! **What it does:**
@@ -75,7 +75,7 @@
 
 use candle_mi::{HookPoint, HookSpec, MIModel, MITokenizer, PcaResult, pca_top_k};
 #[cfg(feature = "memory")]
-use candle_mi::{MemoryReport, MemorySnapshot};
+use candle_mi::{MemoryReport, MemorySnapshot, sync_and_trim_gpu};
 use clap::Parser;
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
@@ -255,6 +255,12 @@ fn run() -> candle_mi::Result<()> {
 
     println!();
 
+    // Auto-tune max_tokens based on available VRAM after model load.
+    // Each forward pass leaks ~64–116 MB (cuBLAS workspace, allocator
+    // overhead) and attention scales as O(seq²). With 14 widths × 10
+    // texts we need ~1.5 GB of headroom beyond peak per-pass usage.
+    let max_tokens = compute_safe_max_tokens(model.device(), args.max_tokens);
+
     let tokenizer = model.tokenizer().ok_or(candle_mi::MIError::Tokenizer(
         "model has no embedded tokenizer".into(),
     ))?;
@@ -277,7 +283,7 @@ fn run() -> candle_mi::Result<()> {
             model_id,
             output_path,
             n_layers,
-            args.max_tokens,
+            max_tokens,
         )?;
         print_finished(t0);
         return Ok(());
@@ -294,7 +300,7 @@ fn run() -> candle_mi::Result<()> {
             hidden,
             start,
             end,
-            args.max_tokens,
+            max_tokens,
         )?;
     }
 
@@ -329,7 +335,7 @@ fn run() -> candle_mi::Result<()> {
             layer,
             model_id,
             layer_path.as_deref(),
-            args.max_tokens,
+            max_tokens,
         )?;
     }
 
@@ -694,6 +700,19 @@ fn collect_means(
             let offsets = &encoding.offsets[chunk_start..chunk_end];
             let chunk_len = ids.len();
 
+            // Debug: report VRAM and chunk size before each forward pass
+            #[cfg(feature = "memory-debug")]
+            {
+                if let Ok(snap) = MemorySnapshot::now(model.device()) {
+                    eprintln!(
+                        "      [debug] width={width} chunk={chunk_idx}/{n_chunks} \
+                         tokens={chunk_len} VRAM={} MB",
+                        snap.vram_mb()
+                            .map_or_else(|| "N/A".to_string(), |v| format!("{v:.0}")),
+                    );
+                }
+            }
+
             // Build input tensor
             let input = candle_core::Tensor::new(ids, model.device())?.unsqueeze(0)?; // [1, chunk_len]
 
@@ -710,6 +729,31 @@ fn collect_means(
             let resid_data: Vec<Vec<f32>> = (0..chunk_len)
                 .map(|i| -> candle_mi::Result<Vec<f32>> { Ok(resid_f32.get(i)?.to_vec1()?) })
                 .collect::<candle_mi::Result<Vec<_>>>()?;
+
+            // Data is now on the CPU — free all GPU tensors and synchronize
+            // so the CUDA allocator can coalesce freed blocks. Without this,
+            // hundreds of forward passes fragment VRAM and cause OOM even
+            // when total free memory would suffice.
+            // `resid_f32`, `resid_2d` are owned GPU tensors; `cache` owns
+            // the hook tensors (including the one `resid` borrows); `input`
+            // is the GPU input tensor.
+            drop(resid_f32);
+            drop(resid_2d);
+            // `resid` is a `&Tensor` borrowing from `cache` — dropping
+            // `cache` releases both the borrow and the owned hook tensors.
+            drop(cache);
+            drop(input);
+            #[cfg(feature = "memory")]
+            sync_and_trim_gpu(model.device());
+
+            #[cfg(feature = "memory-debug")]
+            if let Ok(snap) = MemorySnapshot::now(model.device()) {
+                eprintln!(
+                    "      [debug] after trim: VRAM={} MB",
+                    snap.vram_mb()
+                        .map_or_else(|| "N/A".to_string(), |v| format!("{v:.0}")),
+                );
+            }
 
             // For each token, compute line character count from byte offsets
             // (offsets are relative to the full wrapped text, not the chunk)
@@ -964,6 +1008,66 @@ fn load_text_dir(dir: &Path) -> candle_mi::Result<Vec<String>> {
 /// Strip all newlines from text, replacing them with spaces.
 fn strip_newlines(text: &str) -> String {
     text.replace('\n', " ")
+}
+
+/// Compute a safe `max_tokens` based on available VRAM after model load.
+///
+/// On CUDA, each forward pass temporarily allocates attention matrices,
+/// MLP intermediates, and cuBLAS workspace. The cuBLAS workspace is
+/// never freed (~64–116 MB per unique matrix shape), so cumulative
+/// overhead across a sweep (14 widths × 10 texts) reaches ~1–2 GB.
+///
+/// This function measures free VRAM and picks a safe token limit:
+///
+/// | Free VRAM | `max_tokens` |
+/// |-----------|-------------|
+/// | ≥ 8 GB    | 4096        |
+/// | ≥ 6 GB    | 2048        |
+/// | ≥ 4 GB    | 1024        |
+/// | < 4 GB    | 512         |
+///
+/// The result is capped at `user_max` (the `--max-tokens` argument).
+/// On CPU this is a no-op — returns `user_max` unchanged.
+fn compute_safe_max_tokens(device: &candle_core::Device, user_max: usize) -> usize {
+    #[cfg(feature = "memory")]
+    if let candle_core::Device::Cuda(_) = device {
+        if let Ok(snap) = MemorySnapshot::now(device) {
+            if let (Some(used), Some(total_bytes)) = (snap.vram_mb(), snap.vram_total_bytes) {
+                // CAST: u64 → f64, VRAM total fits in f64 mantissa
+                #[allow(clippy::cast_precision_loss, clippy::as_conversions)]
+                let total = total_bytes as f64 / 1_048_576.0;
+                let free_mb = total - used;
+
+                // Empirical thresholds based on Gemma 2 2B on RTX 5060 Ti:
+                // ~10 GB model, ~6 GB free, OOM at 4096 tokens after ~6
+                // forward passes due to cuBLAS workspace accumulation.
+                let safe = if free_mb >= 8192.0 {
+                    4096
+                } else if free_mb >= 6144.0 {
+                    2048
+                } else if free_mb >= 4096.0 {
+                    1024
+                } else {
+                    512
+                };
+
+                let effective = safe.min(user_max);
+
+                if effective < user_max {
+                    eprintln!(
+                        "Auto-tuned max_tokens: {effective} (free VRAM: {free_mb:.0} MB, \
+                         requested: {user_max})"
+                    );
+                }
+
+                return effective;
+            }
+        }
+    }
+
+    // Suppress unused-variable warnings on non-memory builds.
+    let _ = device;
+    user_max
 }
 
 /// Word-wrap text at `width` characters per line, breaking at word boundaries.
