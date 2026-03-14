@@ -265,12 +265,19 @@ fn run() -> candle_mi::Result<()> {
 
     // 2b. Sweep mode: auto-resume from existing JSON file
     if args.sweep {
-        let output_path = args.output.as_ref().ok_or_else(|| {
-            candle_mi::MIError::Config("--sweep requires --output".into())
-        })?;
+        let output_path = args
+            .output
+            .as_ref()
+            .ok_or_else(|| candle_mi::MIError::Config("--sweep requires --output".into()))?;
         run_sweep(
-            &model, tokenizer, &prose_texts, &widths,
-            model_id, output_path, n_layers, args.max_tokens,
+            &model,
+            tokenizer,
+            &prose_texts,
+            &widths,
+            model_id,
+            output_path,
+            n_layers,
+            args.max_tokens,
         )?;
         print_finished(t0);
         return Ok(());
@@ -383,7 +390,13 @@ fn run_sweep(
     );
 
     let result = run_analysis_returning(
-        model, tokenizer, prose_texts, widths, next_layer, model_id, max_tokens,
+        model,
+        tokenizer,
+        prose_texts,
+        widths,
+        next_layer,
+        model_id,
+        max_tokens,
     )?;
 
     let mut all = existing;
@@ -665,7 +678,9 @@ fn collect_means(
         let full_len = encoding.ids.len();
         let n_chunks = full_len.div_ceil(max_tokens);
         if n_chunks > 1 {
-            eprintln!("      width {width}: {full_len} tokens → {n_chunks} chunks of ≤{max_tokens}");
+            eprintln!(
+                "      width {width}: {full_len} tokens → {n_chunks} chunks of ≤{max_tokens}"
+            );
         }
 
         for chunk_idx in 0..n_chunks {
@@ -993,7 +1008,10 @@ fn print_finished(t0: Instant) {
     let (h, m, s) = utc_hms(secs);
     println!(
         "\nFinished at {:02}:{:02}:{:02} UTC — total runtime: {:.2?}",
-        h, m, s, t0.elapsed()
+        h,
+        m,
+        s,
+        t0.elapsed()
     );
 }
 
@@ -1084,7 +1102,8 @@ fn read_sweep_file(path: &Path) -> candle_mi::Result<Vec<HelixOutput>> {
     })?;
     let entries: Vec<HelixOutput> = serde_json::from_str(&raw).map_err(|e| {
         candle_mi::MIError::Config(format!(
-            "failed to parse {} as JSON array: {e}", path.display()
+            "failed to parse {} as JSON array: {e}",
+            path.display()
         ))
     })?;
     Ok(entries)
