@@ -10,6 +10,9 @@
 //! # Run on all cached models (no argument)
 //! cargo run --release --features transformer,mmap --example activation_patching
 //!
+//! # With JSON output (includes full layer × position heatmap grid)
+//! cargo run --release --features transformer --example activation_patching -- "meta-llama/Llama-3.2-1B" --output examples/results/activation_patching/llama-3.2-1b.json
+//!
 //! # With real memory reporting (RAM + VRAM)
 //! cargo run --release --features transformer,memory --example activation_patching -- "meta-llama/Llama-3.2-1B"
 //! ```
@@ -28,6 +31,12 @@
 //!    isolates the effect of the subject token's representation at each layer.
 //! 4. Prints a layer-by-layer recovery table showing how much the "Paris"
 //!    prediction recovers when clean information is injected at each layer.
+//! 5. Runs a **full grid sweep** over every (layer × token position)
+//!    combination (Meng et al. Figure 1e). For each cell, the clean residual
+//!    at that position is patched into the corrupted forward pass. The result
+//!    is a 2D heatmap of recovery percentages — the "causal trace."
+//! 6. With `--output`, writes the heatmap grid and metadata to JSON for
+//!    plotting (e.g., with the bundled Mathematica script).
 //!
 //! This is the standard "causal tracing" technique from:
 //!
@@ -35,6 +44,7 @@
 //! > "Locating and Editing Factual Associations in GPT."
 //! > *Advances in Neural Information Processing Systems* (NeurIPS), 2022.
 //! > <https://arxiv.org/abs/2202.05262>
+//! > (Section 2.1 "Causal Tracing of Factual Associations", Figure 1e)
 //!
 //! Layers with the highest recovery are the causal site for factual recall.
 
@@ -52,8 +62,55 @@ use candle_mi::{
 };
 #[cfg(feature = "memory")]
 use candle_mi::{MemoryReport, MemorySnapshot};
+use clap::Parser;
+use serde::Serialize;
 use std::path::{Path, PathBuf};
 use std::time::Instant;
+
+// ---------------------------------------------------------------------------
+// CLI arguments
+// ---------------------------------------------------------------------------
+
+#[derive(Parser)]
+#[command(name = "activation_patching")]
+#[command(about = "Causal tracing: patch clean residuals into corrupted passes")]
+struct Args {
+    /// `HuggingFace` model ID (omit to run all cached models)
+    model: Option<String>,
+
+    /// Write structured JSON output (including heatmap grid) to this file
+    #[arg(long)]
+    output: Option<PathBuf>,
+}
+
+// ---------------------------------------------------------------------------
+// JSON output types
+// ---------------------------------------------------------------------------
+
+/// Full causal tracing output for one model, including the Figure 1e grid.
+#[derive(Serialize)]
+struct JsonOutput {
+    /// Model identifier (e.g., "google/gemma-2-2b")
+    model_id: String,
+    /// Clean prompt text
+    clean_prompt: String,
+    /// Corrupted prompt text
+    corrupted_prompt: String,
+    /// Index of the first differing token
+    subject_pos: usize,
+    /// Decoded token strings for the clean prompt
+    tokens: Vec<String>,
+    /// Number of layers
+    n_layers: usize,
+    /// Sequence length (number of tokens)
+    seq_len: usize,
+    /// KL(clean || corrupted) baseline
+    corrupted_kl: f32,
+    /// Recovery % for subject-position-only sweep, indexed by layer
+    subject_recovery: Vec<f32>,
+    /// Full heatmap grid: `grid[layer][position]` = recovery %
+    grid: Vec<Vec<f32>>,
+}
 
 fn main() {
     if let Err(e) = run() {
@@ -62,28 +119,54 @@ fn main() {
     }
 }
 
-/// Clean prompt and a list of candidate corrupted prompts.
+/// Prompt pairs for causal tracing.
 ///
+/// Each pair has a clean prompt and a list of candidate corrupted prompts.
 /// The first candidate whose tokenization has the same length as the clean
-/// prompt is used. This handles tokenizers that split country names differently.
-const CLEAN_PROMPT: &str = "The capital of France is";
-const CORRUPTED_CANDIDATES: &[&str] = &[
-    "The capital of Poland is",
-    "The capital of Brazil is",
-    "The capital of Russia is",
-    "The capital of Canada is",
-    "The capital of Turkey is",
-];
+/// prompt is used. This handles tokenizers that split names differently.
+struct PromptPair {
+    /// Short label for this prompt pair (used in output)
+    label: &'static str,
+    /// The clean factual prompt
+    clean: &'static str,
+    /// Candidate corrupted prompts (first length-matching one is used)
+    corrupted_candidates: &'static [&'static str],
+}
+
+/// Default prompt pair: "The capital of France is" → "Paris".
+const PROMPT_FRANCE: PromptPair = PromptPair {
+    label: "France→Paris",
+    clean: "The capital of France is",
+    corrupted_candidates: &[
+        "The capital of Poland is",
+        "The capital of Brazil is",
+        "The capital of Russia is",
+        "The capital of Canada is",
+        "The capital of Turkey is",
+    ],
+};
+
+/// Meng et al. (2022) original prompt: "The Space Needle is in downtown" → "Seattle".
+const PROMPT_SPACE_NEEDLE: PromptPair = PromptPair {
+    label: "Space Needle→Seattle",
+    clean: "The Space Needle is in downtown",
+    corrupted_candidates: &[
+        "The Eiffel Tower is in downtown",
+        "The Colosseum is located in downtown",
+        "The Big Ben is located in downtown",
+        "The Great Wall is located in downtown",
+    ],
+};
+
+/// All prompt pairs to run.
+const PROMPT_PAIRS: &[&PromptPair] = &[&PROMPT_FRANCE, &PROMPT_SPACE_NEEDLE];
 
 fn run() -> candle_mi::Result<()> {
-    let args: Vec<String> = std::env::args().collect();
+    let args = Args::parse();
 
     // If a model ID is provided, run only that model
-    if args.len() > 1 {
-        // INDEX: args[1] is safe — checked len() > 1 above
-        #[allow(clippy::indexing_slicing)]
-        let model_id = &args[1];
-        return run_single_model(model_id);
+    if let Some(ref model_id) = args.model {
+        return run_single_model(model_id, args.output.as_deref());
     }
 
     // Otherwise, discover and run all cached models
@@ -93,6 +176,10 @@ fn run() -> candle_mi::Result<()> {
         println!("Download one first, e.g.:");
         println!("  cargo run --example fast_download -- meta-llama/Llama-3.2-1B");
         return Ok(());
+    }
+
+    if args.output.is_some() {
+        println!("Note: --output is only used with a specific model ID.");
     }
 
     println!(
@@ -115,7 +202,7 @@ fn run() -> candle_mi::Result<()> {
 // ---------------------------------------------------------------------------
 
 /// Load a model by ID, run activation patching, and print results.
-fn run_single_model(model_id: &str) -> candle_mi::Result<()> {
+fn run_single_model(model_id: &str, output_path: Option<&Path>) -> candle_mi::Result<()> {
     println!("=== {model_id} ===");
 
     #[cfg(feature = "memory")]
@@ -150,22 +237,46 @@ fn run_single_model(model_id: &str) -> candle_mi::Result<()> {
         "model has no embedded tokenizer".into(),
     ))?;
 
-    let corrupted_prompt = find_corrupted_prompt(tokenizer)?;
-    run_patching(&model, tokenizer, CLEAN_PROMPT, &corrupted_prompt)
+    for pair in PROMPT_PAIRS {
+        println!("\n  --- Prompt: {} ---", pair.label);
+        let corrupted_prompt = find_corrupted_prompt(tokenizer, pair)?;
+        // Build a per-pair output path: e.g. "dir/model.json" → "dir/model_france.json"
+        let pair_output = output_path.map(|p| {
+            let stem = p.file_stem().and_then(|s| s.to_str()).unwrap_or("out");
+            let ext = p.extension().and_then(|s| s.to_str()).unwrap_or("json");
+            // BORROW: to_lowercase() — &str → String for filename sanitisation
+            let suffix = pair.label.split('→').next().unwrap_or("unknown").to_lowercase();
+            let suffix = suffix.trim();
+            p.with_file_name(format!("{stem}_{suffix}.{ext}"))
+        });
+        run_patching(
+            &model,
+            tokenizer,
+            pair.clean,
+            &corrupted_prompt,
+            model_id,
+            pair_output.as_deref(),
+        )?;
+    }
+    Ok(())
 }
 
 /// Pick the first corrupted prompt whose tokenization matches the clean
 /// prompt's token count.
-fn find_corrupted_prompt(tokenizer: &MITokenizer) -> candle_mi::Result<String> {
-    let clean_len = tokenizer.encode(CLEAN_PROMPT)?.len();
-    for &candidate in CORRUPTED_CANDIDATES {
+fn find_corrupted_prompt(
+    tokenizer: &MITokenizer,
+    pair: &PromptPair,
+) -> candle_mi::Result<String> {
+    let clean_len = tokenizer.encode(pair.clean)?.len();
+    for &candidate in pair.corrupted_candidates {
         if tokenizer.encode(candidate)?.len() == clean_len {
             return Ok(candidate.into());
         }
     }
-    Err(candle_mi::MIError::Tokenizer(
-        "no corrupted prompt candidate matches clean prompt token count".into(),
-    ))
+    Err(candle_mi::MIError::Tokenizer(format!(
+        "no corrupted prompt candidate matches clean prompt token count for \"{}\"",
+        pair.label
+    )))
 }
 
 // ---------------------------------------------------------------------------
@@ -293,8 +404,25 @@ fn run_model(model_id: &str, snapshot: &Path) -> candle_mi::Result<()> {
     }
     let tokenizer = MITokenizer::from_hf_path(tokenizer_path)?;
 
-    let corrupted_prompt = find_corrupted_prompt(&tokenizer)?;
-    run_patching(&model, &tokenizer, CLEAN_PROMPT, &corrupted_prompt)
+    for pair in PROMPT_PAIRS {
+        println!("\n  --- Prompt: {} ---", pair.label);
+        match find_corrupted_prompt(&tokenizer, pair) {
+            Ok(corrupted_prompt) => {
+                run_patching(
+                    &model,
+                    &tokenizer,
+                    pair.clean,
+                    &corrupted_prompt,
+                    model_id,
+                    None,
+                )?;
+            }
+            Err(e) => {
+                println!("  Skipped: {e}");
+            }
+        }
+    }
+    Ok(())
 }
 
 // ---------------------------------------------------------------------------
@@ -302,11 +430,16 @@ fn run_model(model_id: &str, snapshot: &Path) -> candle_mi::Result<()> {
 // ---------------------------------------------------------------------------
 
 /// Run clean, corrupted, and patching passes, then print the recovery table.
+///
+/// When `output_path` is `Some`, also writes a JSON file with the full
+/// layer × position heatmap grid (Meng et al. Figure 1e).
 fn run_patching(
     model: &MIModel,
     tokenizer: &MITokenizer,
     clean_prompt: &str,
     corrupted_prompt: &str,
+    model_id: &str,
+    output_path: Option<&Path>,
 ) -> candle_mi::Result<()> {
     let n_layers = model.num_layers();
     let hidden = model.hidden_size();
@@ -419,6 +552,7 @@ fn run_patching(
     let t3 = Instant::now();
     let mut best_layer = 0;
     let mut best_recovery = f32::NEG_INFINITY;
+    let mut subject_recovery = Vec::with_capacity(n_layers);
 
     for layer in 0..n_layers {
         // Build a mixed tensor: corrupted at all positions, clean at subject_pos
@@ -460,6 +594,7 @@ fn run_patching(
             100.0
         };
 
+        subject_recovery.push(recovery);
         if recovery > best_recovery {
             best_recovery = recovery;
             best_layer = layer;
@@ -481,8 +616,110 @@ fn run_patching(
 
     println!("\n  Best recovery: layer {best_layer} ({best_recovery:.1}%)");
     println!("  Patching sweep ({n_layers} passes): {patch_time:.2?}");
+
+    // ── Step 4: Full grid sweep (layer × position) — Figure 1e ────────
+    println!("\n  --- Full causal trace (layer × position) ---");
+    let t4 = Instant::now();
+    let mut grid: Vec<Vec<f32>> = Vec::with_capacity(n_layers);
+
+    for layer in 0..n_layers {
+        let mut row = Vec::with_capacity(seq_len);
+        let corrupted_resid = corrupted_acts
+            .get_layer(layer)
+            .ok_or_else(|| candle_mi::MIError::Hook(format!("layer {layer} not in cache")))?;
+        let clean_resid = clean_acts
+            .get_layer(layer)
+            .ok_or_else(|| candle_mi::MIError::Hook(format!("layer {layer} not in cache")))?;
+
+        for pos in 0..seq_len {
+            let patched_resid = patch_position(
+                corrupted_resid,
+                clean_resid,
+                pos,
+                seq_len,
+                hidden,
+                model.device(),
+            )?
+            .unsqueeze(0)?; // [1, seq, hidden]
+
+            let mut patch_hooks = HookSpec::new();
+            patch_hooks.intervene(
+                HookPoint::ResidPost(layer),
+                Intervention::Replace(patched_resid),
+            );
+
+            let patched_cache = model.forward(&corrupted_input, &patch_hooks)?;
+            let patched_logits = patched_cache.output().get(0)?.get(seq_len - 1)?;
+            let patched_kl = kl_divergence(&clean_logits, &patched_logits)?;
+
+            let recovery = if corrupted_kl > 1e-10 {
+                (1.0 - patched_kl / corrupted_kl) * 100.0
+            } else {
+                100.0
+            };
+            row.push(recovery);
+        }
+        grid.push(row);
+    }
+    let grid_time = t4.elapsed();
+
+    // Decode each token for column headers
+    let token_labels: Vec<String> = clean_ids
+        .iter()
+        .map(|&tid| tokenizer.decode(&[tid]))
+        .collect::<candle_mi::Result<Vec<_>>>()?;
+
+    // Print header row
+    print!("\n  {:>5}", "Layer");
+    for (pos, label) in token_labels.iter().enumerate() {
+        // BORROW: chars().take() — safe Unicode truncation
+        let short: String = label.chars().take(8).collect();
+        print!("  {:>10}", format!("[{pos}]{short}"));
+    }
     println!();
 
+    // Print separator
+    print!("  {:->5}", "");
+    for _ in 0..seq_len {
+        print!("  {:->10}", "");
+    }
+    println!();
+
+    // Print each layer row
+    for (layer, row) in grid.iter().enumerate() {
+        print!("  {layer:>5}");
+        for &val in row {
+            print!("  {val:>9.1}%");
+        }
+        println!();
+    }
+
+    // CAST: usize → display, small values
+    println!(
+        "\n  Full grid ({n_layers}×{seq_len} = {} passes): {grid_time:.2?}",
+        n_layers * seq_len
+    );
+
+    // ── Step 5: JSON output ───────────────────────────────────────────
+    if let Some(path) = output_path {
+        let output = JsonOutput {
+            // BORROW: to_owned() — &str → String for JSON serialization
+            model_id: model_id.to_owned(),
+            clean_prompt: clean_prompt.to_owned(),
+            corrupted_prompt: corrupted_prompt.to_owned(),
+            subject_pos,
+            tokens: token_labels,
+            n_layers,
+            seq_len,
+            corrupted_kl,
+            subject_recovery,
+            grid,
+        };
+        write_json(path, &output)?;
+        println!("\n  JSON written to {}", path.display());
+    }
+
+    println!();
     Ok(())
 }
 
@@ -534,4 +771,19 @@ fn estimate_weight_mb(n_layers: usize, hidden: usize) -> f64 {
     let params_per_layer = 12.0 * (hidden as f64) * (hidden as f64);
     let total_params = (n_layers as f64) * params_per_layer;
     total_params * 4.0 / 1_000_000.0
+}
+
+/// Serialize `output` as pretty JSON and write to `path`.
+fn write_json(path: &Path, output: &JsonOutput) -> candle_mi::Result<()> {
+    let json = serde_json::to_string_pretty(output)
+        .map_err(|e| candle_mi::MIError::Config(format!("JSON serialization failed: {e}")))?;
+    if let Some(parent) = path.parent() {
+        std::fs::create_dir_all(parent).map_err(|e| {
+            candle_mi::MIError::Config(format!("failed to create {}: {e}", parent.display()))
+        })?;
+    }
+    std::fs::write(path, &json).map_err(|e| {
+        candle_mi::MIError::Config(format!("failed to write {}: {e}", path.display()))
+    })?;
+    Ok(())
 }
