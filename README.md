@@ -159,6 +159,7 @@ This is a research-first design: MI analyses need to see everything, and the per
 | Paper | What we replicate | Example |
 |-------|------------------|---------|
 | Anthropic, [*On the Biology of a Large Language Model*](https://transformer-circuits.pub/2025/attribution-graphs/biology.html) (2025) | Figure 13 — suppress natural rhyme features and inject an alternative via CLT, sweeping injection position | [`figure13_planning_poems`](examples/README.md#example-output-figure13_planning_poems) |
+| Anthropic, [*When Models Manipulate Manifolds*](https://transformer-circuits.pub/2025/linebreaks/index.html) (2025) | Character count helix — residual stream encodes line position as a helical manifold; reproduced on Gemma 2 2B with 30 Dickens chapters | [`character_count_helix`](examples/README.md#example-output-character_count_helix) |
 | Meng et al., [*Locating and Editing Factual Associations in GPT*](https://arxiv.org/abs/2202.05262) (2022) | Causal tracing via position-specific activation patching | [`activation_patching`](examples/README.md#example-output-activation_patching) |
 | Taufeeque et al., [*Recurrent Feedback*](https://arxiv.org/abs/2407.15421) (2024) | Anacrousis — recurrent steering passes for rhyme completion | [`recurrent_feedback`](examples/README.md#example-output-recurrent_feedback) |
 
@@ -175,6 +176,7 @@ This is a research-first design: MI analyses need to see everything, and the per
 | `sae` | no | Sparse Autoencoder support |
 | `mmap` | no | Memory-mapped weight loading (required for sharded models) |
 | `memory` | no | RAM/VRAM memory reporting |
+| `memory-debug` | no | Raw DXGI/NVML values and per-chunk VRAM on stderr (implies `memory`) |
 | `probing` | no | Linear probing via linfa (experimental) |
 | `metal` | no | Apple Metal GPU acceleration |
 

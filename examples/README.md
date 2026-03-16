@@ -267,16 +267,34 @@ real token ("The") serves as the attention sink. **Llama 3.2 1B** peaks early
 
 ### Example output: `activation_patching`
 
-Clean prompt: *"The capital of France is"* vs. corrupted: *"The capital of Poland
-is"*. For each layer, the clean residual at the subject position ("France") is
-patched into the corrupted forward pass. Recovery measures how much the clean
-"Paris" prediction is restored.
+Replicates the causal tracing technique from
+[Meng et al. (2022)](https://arxiv.org/abs/2202.05262) "Locating and Editing
+Factual Associations in GPT" (Section 2.1, Figure 1e). Two prompt pairs are
+tested: "The capital of France is" → "Paris" and the paper's original
+"The Space Needle is in downtown" → "Seattle".
+
+**Subject-position sweep** (one column of the heatmap):
 
 | Model | Subject pos | Corrupted KL | Best layer | Best recovery | Sharp cliff |
 |-------|------------|-------------|------------|--------------|-------------|
 | Llama 3.2 1B | 4 | 3.78 | 1 (100%) | Layers 0-8: >99% | Layer 9-15: 92%→0% |
 | Gemma 2 2B | 4 | 0.50 | 1 (100%) | Layers 0-17: >89% | Layer 18-25: 74%→0% |
 | StarCoder2 3B | 3 | 4.16 | 9 (99.9%) | Layers 0-20: >94% | Layer 21: 5% cliff |
+
+**Full causal trace heatmap** (layer × token position) — Gemma 2 2B on the
+Space Needle prompt, matching the paper's Figure 1(e):
+
+![Causal Trace Heatmap — Gemma 2 2B, Space Needle](results/activation_patching/plots/google_gemma-2-2b_causal_trace_heatmap.png)
+
+The heatmap shows two key patterns from the paper:
+
+- **Late site** (layers 22–25, "downtown" row): bright red — attention at the
+  last token copies factual information to the output, matching Meng et al.'s
+  finding in GPT-2-XL (layers 25–45).
+- **Subject tokens** ("Space", "Needle" rows): strong recovery across most
+  layers. In GPT-2-XL, the "early site" was concentrated at the last subject
+  token in mid-layers; in Gemma 2 2B the signal is more diffuse, likely due
+  to GQA and logit softcapping distributing information more broadly.
 
 **Llama 3.2 1B** shows a gradual decline: recovery drops from 100% at early
 layers to 72% at layer 11, reaching 0% by the final layer. The factual
@@ -289,6 +307,9 @@ its deeper architecture.
 **StarCoder2 3B** shows an abrupt cliff at layer 21: recovery drops from
 94% to 5% in a single layer. As a code model, it stores factual knowledge
 in a concentrated layer band.
+
+Output JSON and Mathematica plotting script (heatmap, recovery curve) are in
+[`examples/results/activation_patching/`](results/activation_patching/).
 
 ### Example output: `token_positions`
 
@@ -427,6 +448,12 @@ Typical workflow: `--scan-layers all` first to find the interesting layers,
 then either `--pca-layers 10..13` to analyse a few at once, or `--sweep all`
 for an overnight run.
 
+**Layer 12 helix** — Gemma 2 2B residual stream, 30 Dickens chapters, 150
+character counts projected onto PC1–PC3 (98.5% top-6 variance). The spiral
+is the model's internal representation of "position within a line":
+
+![Character Count Helix — Layer 12 rotating](results/character_count_helix/plots/L12_helix_rotating.gif)
+
 Output JSON and Mathematica plotting script (3D helix, cosine heatmap, variance
 bars) are in [`examples/results/character_count_helix/`](results/character_count_helix/).
 
@@ -487,6 +514,9 @@ Output JSON and Mathematica plotting script are in
 - **character_count_helix** defaults to `google/gemma-2-2b` (~8 GB VRAM at F32,
   requires `--features mmap` for sharded weights). Two bundled prose files
   (Gettysburg Address, Dickens) are in `results/character_count_helix/texts/`.
+  The Dickens chapters are from *A Tale of Two Cities*
+  ([Project Gutenberg #98](https://www.gutenberg.org/ebooks/98)), public domain
+  — no licensing restrictions for testing or research.
   Use `--text` to supply any plain-text file.
 - **`memory` feature** enables per-process VRAM reporting and GPU adapter
   identification. On Windows, uses DXGI (`IDXGIAdapter3::QueryVideoMemoryInfo`)
