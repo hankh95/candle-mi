@@ -245,7 +245,12 @@ fn run_single_model(model_id: &str, output_path: Option<&Path>) -> candle_mi::Re
             let stem = p.file_stem().and_then(|s| s.to_str()).unwrap_or("out");
             let ext = p.extension().and_then(|s| s.to_str()).unwrap_or("json");
             // BORROW: to_lowercase() — &str → String for filename sanitisation
-            let suffix = pair.label.split('→').next().unwrap_or("unknown").to_lowercase();
+            let suffix = pair
+                .label
+                .split('→')
+                .next()
+                .unwrap_or("unknown")
+                .to_lowercase();
             let suffix = suffix.trim();
             p.with_file_name(format!("{stem}_{suffix}.{ext}"))
         });
@@ -263,10 +268,7 @@ fn run_single_model(model_id: &str, output_path: Option<&Path>) -> candle_mi::Re
 
 /// Pick the first corrupted prompt whose tokenization matches the clean
 /// prompt's token count.
-fn find_corrupted_prompt(
-    tokenizer: &MITokenizer,
-    pair: &PromptPair,
-) -> candle_mi::Result<String> {
+fn find_corrupted_prompt(tokenizer: &MITokenizer, pair: &PromptPair) -> candle_mi::Result<String> {
     let clean_len = tokenizer.encode(pair.clean)?.len();
     for &candidate in pair.corrupted_candidates {
         if tokenizer.encode(candidate)?.len() == clean_len {
