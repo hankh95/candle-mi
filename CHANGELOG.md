@@ -9,6 +9,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 
 ### Added
 
+- **`steering_convergence` example** — new experiment that injects contrastive
+  steering vectors (France vs Germany) at each layer and measures cosine
+  similarity between steered and natural activations across all layers;
+  produces a convergence matrix, identifies absorption boundaries (the layer
+  where the model returns to its natural computation path), and runs a
+  strength sweep showing how perturbation intensity shifts absorption depth;
+  answers: "does the model converge to an attractor or find alternative paths?"
 - **`figure13_planning_poems` chart and explanation** (`examples/README.md`) —
   added `gemma_log.png` (Gemma 2 2B, 426K CLT suppress "out" + inject "around")
   with pedagogical walkthrough explaining log-scale probability spike at the

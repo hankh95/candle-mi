@@ -37,6 +37,7 @@ See also: [HOOKS.md](../HOOKS.md) for hook point reference, [BACKENDS.md](../BAC
 | `logit_lens` | `transformer` | Layer-by-layer prediction tracking via residual stream projection |
 | `attention_knockout` | `transformer` | Knock out a specific attention edge (last→first token), measure KL divergence and top changed tokens |
 | `steering_dose_response` | `transformer` | Sweep steering dose levels, build a dose-response curve, and interpolate target attention |
+| `steering_convergence` | `transformer` | Steering convergence: inject contrastive steering vectors, measure cosine similarity to natural activations, identify absorption boundaries |
 | `attention_patterns` | `transformer` | Capture and analyze per-head attention patterns at every layer |
 | `activation_patching` | `transformer` | Causal tracing via position-specific activation patching (Meng et al., 2022) |
 | `token_positions` | *(default)* | Character-to-token mapping with `EncodingWithOffsets` and `convert_positions` |
@@ -92,6 +93,9 @@ cargo run --release --features transformer --example steering_dose_response -- "
 
 # Steering dose-response — all cached models
 cargo run --release --features transformer,mmap --example steering_dose_response
+
+# Steering convergence — contrastive steering + absorption boundary analysis
+cargo run --release --features transformer,mmap --example steering_convergence -- "meta-llama/Llama-3.2-1B"
 
 # Attention patterns — single model
 cargo run --release --features transformer --example attention_patterns -- "meta-llama/Llama-3.2-1B"
