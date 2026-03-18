@@ -108,6 +108,65 @@ artifact.
    computation is highly local: each layer mostly corrects toward the
    attractor independently, rather than requiring multi-layer coordination.
 
+## Rhyme planning: what we learnt from 20 rhyme groups
+
+We ran the same convergence analysis on 20 rhyme groups from the
+[plip-rs poetry corpus](https://github.com/PCfVW/plip-rs/tree/melometis/docs/planning-in-poems),
+using couplets validated during the Figure 13 reverse-engineering work.
+
+### The experiment
+
+For each of 20 rhyme groups (-air, -ake, -all, ..., -ove, -ow, -own), we:
+- Used a 4-line couplet where line 3 ends with a rhyme-setting word
+- Swapped that word with a word from a different rhyme group (cross-group contrastive)
+- Tracked P(rhyme_word) at the last token position
+
+**Batch command:** `--batch-file batch_rhyme_groups.json` (20 experiments, ~30s total)
+
+### Results: the model doesn't plan rhymes at the last token
+
+| Metric | Factual (Paris) | Rhyme (20 groups avg) |
+|--------|----------------|----------------------|
+| Baseline P(target) | **39.3%** | **<0.5%** (highest: 0.41%) |
+| Min cosine similarity | 0.90 | 0.97 |
+| Absorption rate | 81% | 93% |
+| Max KL divergence | 1.5 | 0.3 |
+
+**None of the 20 rhyme groups showed meaningful P(target) at the last token.**
+The model predicts semantically sensible completions ("light" 62%, "treasure" 54%,
+"fly" 27%), not rhyme words. The contrastive steering vectors produce small
+perturbations because the model's last-token residual stream barely distinguishes
+between rhyme-setting words in different groups.
+
+### Why this is a valuable negative result
+
+This confirms what was discovered during the
+[plip-rs Figure 13 replication](https://github.com/PCfVW/plip-rs/tree/melometis/docs/planning-in-poems/03-figure13-replication.md):
+**rhyme planning is not a last-token phenomenon.** The model decides the rhyme
+word at the *planning site* — an earlier position in the sequence (typically where
+the rhyme-setting word appears in line 3) — not at the output position. CLT
+features for rhyme planning fire at that specific earlier position and produce
+massive probability spikes (up to 10^7 fold) there, while having zero effect
+elsewhere.
+
+Closing this door is important: **the steering_convergence tool as built
+perfectly measures factual recall attractors (last-token computation), but
+planning attractors require position-aware injection at the planning site.**
+
+### Additional insight: within-group vs cross-group contrastive
+
+We also tested swapping "about" → "around" (same rhyme group: -AW1-N-D). This
+produced essentially zero perturbation (KL < 0.02, cosine > 0.993). The model's
+residual stream clusters words in the same rhyme family so tightly that they're
+nearly indistinguishable — a direct validation of the CLT rhyme group structure
+discovered in plip-rs.
+
+### Next step: `--inject-position`
+
+To measure the planning attractor, the steering vector needs to be injected at
+the planning site (the rhyme-setting word position), not at the last token. This
+is the natural extension of this work.
+
 ## Experiment setup
 
 | Parameter | Value |
@@ -127,6 +186,9 @@ artifact.
 cargo run --features transformer,mmap,memory --release --example steering_convergence -- "meta-llama/Llama-3.2-1B" --output examples/results/steering_convergence/llama-3.2-1b.json
 cargo run --features transformer,mmap,memory --release --example steering_convergence -- "google/gemma-2-2b" --output examples/results/steering_convergence/gemma-2-2b.json
 
+# Batch: 20 rhyme groups (~30s on GPU)
+cargo run --features transformer,mmap,memory --release --example steering_convergence -- "meta-llama/Llama-3.2-1B" --batch-file examples/results/steering_convergence/batch_rhyme_groups.json --output examples/results/steering_convergence/batch_llama
+
 # Plot with Mathematica
 # Open convergence_plot.wl and evaluate all — it auto-iterates over all JSON files.
 # Plots are exported to the plots/ subfolder.
@@ -136,8 +198,10 @@ cargo run --features transformer,mmap,memory --release --example steering_conver
 
 | File | Description |
 |------|-------------|
-| `llama-3.2-1b.json` | Full output for Llama 3.2 1B |
-| `gemma-2-2b.json` | Full output for Gemma 2 2B |
+| `llama-3.2-1b.json` | Full output for Llama 3.2 1B (factual recall) |
+| `gemma-2-2b.json` | Full output for Gemma 2 2B (factual recall) |
+| `batch_rhyme_groups.json` | Batch input: 20 rhyme groups from plip-rs corpus |
+| `batch_llama/` | Per-group JSON output (20 files, one per rhyme group) |
 | `convergence_plot.wl` | Mathematica plotting script (auto-iterates all JSON files) |
 | `plots/` | Generated PNG plots (convergence matrix, P(target), strength sweep) |
 | `README.md` | This file |

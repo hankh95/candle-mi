@@ -1,0 +1,501 @@
+{
+  "model_id": "meta-llama/Llama-3.2-1B",
+  "prompt": "The sun goes up, the sun goes down The moon shines bright above the town The evening sky appeared so small And felt the presence of the",
+  "contrastive_prompt": "The sun goes up, the sun goes down The moon shines bright above the town The evening sky appeared so proclaim And felt the presence of the",
+  "n_layers": 16,
+  "hidden_size": 2048,
+  "target_token": " ball",
+  "target_token_id": 5041,
+  "baseline_p_target": 0.00005634447,
+  "baseline_top5": [
+    {
+      "token": " night",
+      "token_id": 3814,
+      "probability": 0.12686983
+    },
+    {
+      "token": " moon",
+      "token_id": 18266,
+      "probability": 0.06893873
+    },
+    {
+      "token": " stars",
+      "token_id": 9958,
+      "probability": 0.06404189
+    },
+    {
+      "token": " Lord",
+      "token_id": 10425,
+      "probability": 0.059265334
+    },
+    {
+      "token": " lord",
+      "token_id": 38031,
+      "probability": 0.03099351
+    }
+  ],
+  "convergence_matrix": [
+    [
+      1.0,
+      0.9991157,
+      0.9994707,
+      0.99968,
+      0.9998428,
+      0.9998876,
+      0.9999234,
+      0.9999424,
+      0.9999665,
+      0.9999846,
+      0.9999894,
+      0.999991,
+      0.99999285,
+      0.99999374,
+      0.9999932,
+      0.99999434
+    ],
+    [
+      1.0,
+      1.0000001,
+      0.9986963,
+      0.9990985,
+      0.99955565,
+      0.9996479,
+      0.9997552,
+      0.9998002,
+      0.9998816,
+      0.9999331,
+      0.99994624,
+      0.99995595,
+      0.9999665,
+      0.9999705,
+      0.99996275,
+      0.99996823
+    ],
+    [
+      1.0,
+      1.0000001,
+      1.0,
+      0.99514073,
+      0.99757224,
+      0.99822456,
+      0.99878454,
+      0.99910235,
+      0.99951947,
+      0.9997588,
+      0.9998171,
+      0.9998541,
+      0.99988395,
+      0.99989843,
+      0.99987966,
+      0.99990124
+    ],
+    [
+      1.0,
+      1.0000001,
+      1.0,
+      1.0,
+      0.9958179,
+      0.997049,
+      0.9980987,
+      0.99864286,
+      0.99926925,
+      0.9996483,
+      0.99973714,
+      0.9997626,
+      0.99980295,
+      0.9998318,
+      0.9998236,
+      0.9998517
+    ],
+    [
+      1.0,
+      1.0000001,
+      1.0,
+      1.0,
+      1.0,
+      0.9944029,
+      0.9962152,
+      0.9974149,
+      0.99858487,
+      0.9992821,
+      0.9994753,
+      0.99955744,
+      0.9996445,
+      0.99968827,
+      0.9996712,
+      0.99972135
+    ],
+    [
+      1.0,
+      1.0000001,
+      1.0,
+      1.0,
+      1.0,
+      1.0,
+      0.9925413,
+      0.9950936,
+      0.9975368,
+      0.99875736,
+      0.9991564,
+      0.9993037,
+      0.99942046,
+      0.9995142,
+      0.99950963,
+      0.99960303
+    ],
+    [
+      1.0,
+      1.0000001,
+      1.0,
+      1.0,
+      1.0,
+      1.0,
+      1.0,
+      0.99038213,
+      0.9947054,
+      0.9972633,
+      0.9980283,
+      0.9983409,
+      0.99857897,
+      0.99877524,
+      0.9988125,
+      0.9990561
+    ],
+    [
+      1.0,
+      1.0000001,
+      1.0,
+      1.0,
+      1.0,
+      1.0,
+      1.0,
+      1.0000001,
+      0.99052715,
+      0.9952093,
+      0.99673206,
+      0.9973321,
+      0.9977306,
+      0.9980374,
+      0.99817,
+      0.9986267
+    ],
+    [
+      1.0,
+      1.0000001,
+      1.0,
+      1.0,
+      1.0,
+      1.0,
+      1.0,
+      1.0000001,
+      1.0,
+      0.99297136,
+      0.99494904,
+      0.9958968,
+      0.99618787,
+      0.9966163,
+      0.99681467,
+      0.99764574
+    ],
+    [
+      1.0,
+      1.0000001,
+      1.0,
+      1.0,
+      1.0,
+      1.0,
+      1.0,
+      1.0000001,
+      1.0,
+      1.0,
+      0.98840874,
+      0.9904901,
+      0.9910557,
+      0.99211484,
+      0.99268025,
+      0.99433464
+    ],
+    [
+      1.0,
+      1.0000001,
+      1.0,
+      1.0,
+      1.0,
+      1.0,
+      1.0,
+      1.0000001,
+      1.0,
+      1.0,
+      1.0000001,
+      0.98590446,
+      0.98592997,
+      0.98751134,
+      0.9882624,
+      0.990844
+    ],
+    [
+      1.0,
+      1.0000001,
+      1.0,
+      1.0,
+      1.0,
+      1.0,
+      1.0,
+      1.0000001,
+      1.0,
+      1.0,
+      1.0000001,
+      1.0000001,
+      0.98267466,
+      0.98429054,
+      0.985074,
+      0.98794985
+    ],
+    [
+      1.0,
+      1.0000001,
+      1.0,
+      1.0,
+      1.0,
+      1.0,
+      1.0,
+      1.0000001,
+      1.0,
+      1.0,
+      1.0000001,
+      1.0000001,
+      0.9999999,
+      0.9799038,
+      0.9806604,
+      0.9845915
+    ],
+    [
+      1.0,
+      1.0000001,
+      1.0,
+      1.0,
+      1.0,
+      1.0,
+      1.0,
+      1.0000001,
+      1.0,
+      1.0,
+      1.0000001,
+      1.0000001,
+      0.9999999,
+      1.0000001,
+      0.9773565,
+      0.9810667
+    ],
+    [
+      1.0,
+      1.0000001,
+      1.0,
+      1.0,
+      1.0,
+      1.0,
+      1.0,
+      1.0000001,
+      1.0,
+      1.0,
+      1.0000001,
+      1.0000001,
+      0.9999999,
+      1.0000001,
+      0.9999999,
+      0.97439486
+    ],
+    [
+      1.0,
+      1.0000001,
+      1.0,
+      1.0,
+      1.0,
+      1.0,
+      1.0,
+      1.0000001,
+      1.0,
+      1.0,
+      1.0000001,
+      1.0000001,
+      0.9999999,
+      1.0000001,
+      0.9999999,
+      1.0
+    ]
+  ],
+  "layer_summaries": [
+    {
+      "injection_layer": 0,
+      "p_target": 0.00005646895,
+      "kl_divergence": 0.000073247116,
+      "absorption_layer": 1
+    },
+    {
+      "injection_layer": 1,
+      "p_target": 0.000055678865,
+      "kl_divergence": 0.00035470832,
+      "absorption_layer": 2
+    },
+    {
+      "injection_layer": 2,
+      "p_target": 0.000057330355,
+      "kl_divergence": 0.0011891316,
+      "absorption_layer": 3
+    },
+    {
+      "injection_layer": 3,
+      "p_target": 0.000058065605,
+      "kl_divergence": 0.0024247114,
+      "absorption_layer": 4
+    },
+    {
+      "injection_layer": 4,
+      "p_target": 0.000056098434,
+      "kl_divergence": 0.0034210552,
+      "absorption_layer": 5
+    },
+    {
+      "injection_layer": 5,
+      "p_target": 0.00005986436,
+      "kl_divergence": 0.0076095066,
+      "absorption_layer": 6
+    },
+    {
+      "injection_layer": 6,
+      "p_target": 0.000058048245,
+      "kl_divergence": 0.017810937,
+      "absorption_layer": 7
+    },
+    {
+      "injection_layer": 7,
+      "p_target": 0.00005432239,
+      "kl_divergence": 0.029099116,
+      "absorption_layer": 8
+    },
+    {
+      "injection_layer": 8,
+      "p_target": 0.000054733864,
+      "kl_divergence": 0.0563764,
+      "absorption_layer": 9
+    },
+    {
+      "injection_layer": 9,
+      "p_target": 0.0000510738,
+      "kl_divergence": 0.12326434,
+      "absorption_layer": 10
+    },
+    {
+      "injection_layer": 10,
+      "p_target": 0.000048090005,
+      "kl_divergence": 0.19489042,
+      "absorption_layer": 11
+    },
+    {
+      "injection_layer": 11,
+      "p_target": 0.000042455547,
+      "kl_divergence": 0.2510596,
+      "absorption_layer": 12
+    },
+    {
+      "injection_layer": 12,
+      "p_target": 0.000045728146,
+      "kl_divergence": 0.3070053,
+      "absorption_layer": 13
+    },
+    {
+      "injection_layer": 13,
+      "p_target": 0.00004625865,
+      "kl_divergence": 0.37232518,
+      "absorption_layer": 14
+    },
+    {
+      "injection_layer": 14,
+      "p_target": 0.000033221095,
+      "kl_divergence": 0.39491034,
+      "absorption_layer": 15
+    },
+    {
+      "injection_layer": 15,
+      "p_target": 0.000032531425,
+      "kl_divergence": 0.37018678,
+      "absorption_layer": null
+    }
+  ],
+  "best_injection_layer": 14,
+  "strength_sweep": [
+    {
+      "strength": 0.5,
+      "p_target": 0.00004532191,
+      "kl_divergence": 0.11021665,
+      "absorption_layer": 15
+    },
+    {
+      "strength": 1.0,
+      "p_target": 0.000033221095,
+      "kl_divergence": 0.39491034,
+      "absorption_layer": 15
+    },
+    {
+      "strength": 1.5,
+      "p_target": 0.000023728075,
+      "kl_divergence": 0.78516257,
+      "absorption_layer": null
+    },
+    {
+      "strength": 2.0,
+      "p_target": 0.000017214206,
+      "kl_divergence": 1.2266524,
+      "absorption_layer": null
+    },
+    {
+      "strength": 2.5,
+      "p_target": 0.000012962646,
+      "kl_divergence": 1.6781646,
+      "absorption_layer": null
+    },
+    {
+      "strength": 3.0,
+      "p_target": 0.00001022353,
+      "kl_divergence": 2.1084628,
+      "absorption_layer": null
+    },
+    {
+      "strength": 3.5,
+      "p_target": 0.000008449068,
+      "kl_divergence": 2.497842,
+      "absorption_layer": null
+    },
+    {
+      "strength": 4.0,
+      "p_target": 0.000007273287,
+      "kl_divergence": 2.8378747,
+      "absorption_layer": null
+    },
+    {
+      "strength": 4.5,
+      "p_target": 0.0000064611063,
+      "kl_divergence": 3.1294866,
+      "absorption_layer": null
+    },
+    {
+      "strength": 5.0,
+      "p_target": 0.0000058630053,
+      "kl_divergence": 3.353548,
+      "absorption_layer": null
+    },
+    {
+      "strength": 5.5,
+      "p_target": 0.0000053886633,
+      "kl_divergence": 3.5704076,
+      "absorption_layer": null
+    },
+    {
+      "strength": 6.0,
+      "p_target": 0.0000049863465,
+      "kl_divergence": 3.7530322,
+      "absorption_layer": null
+    }
+  ],
+  "threshold": 0.95
+}

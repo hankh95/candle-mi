@@ -1,0 +1,501 @@
+{
+  "model_id": "meta-llama/Llama-3.2-1B",
+  "prompt": "The queen was known for beauty rare With flowers woven in her hair She taught the little ones to restore While standing near the ancient",
+  "contrastive_prompt": "The queen was known for beauty rare With flowers woven in her hair She taught the little ones to torn While standing near the ancient",
+  "n_layers": 16,
+  "hidden_size": 2048,
+  "target_token": " shore",
+  "target_token_id": 31284,
+  "baseline_p_target": 0.0040974733,
+  "baseline_top5": [
+    {
+      "token": " tree",
+      "token_id": 5021,
+      "probability": 0.14225323
+    },
+    {
+      "token": " trees",
+      "token_id": 12690,
+      "probability": 0.055321433
+    },
+    {
+      "token": " temple",
+      "token_id": 27850,
+      "probability": 0.04113069
+    },
+    {
+      "token": " tomb",
+      "token_id": 44180,
+      "probability": 0.035573248
+    },
+    {
+      "token": " stone",
+      "token_id": 9998,
+      "probability": 0.026676284
+    }
+  ],
+  "convergence_matrix": [
+    [
+      1.0,
+      0.9995992,
+      0.9997621,
+      0.99982846,
+      0.9999088,
+      0.9999316,
+      0.99994755,
+      0.9999608,
+      0.9999719,
+      0.99998367,
+      0.9999856,
+      0.9999876,
+      0.99998945,
+      0.99998915,
+      0.9999892,
+      0.99999124
+    ],
+    [
+      1.0,
+      1.0,
+      0.9991423,
+      0.9994009,
+      0.99970484,
+      0.99980897,
+      0.9998583,
+      0.9998936,
+      0.9999221,
+      0.99995273,
+      0.99995923,
+      0.99996686,
+      0.99997145,
+      0.99997276,
+      0.99996924,
+      0.9999748
+    ],
+    [
+      1.0,
+      1.0,
+      1.0,
+      0.99832517,
+      0.99914676,
+      0.9994662,
+      0.9996037,
+      0.99971765,
+      0.9998202,
+      0.99989927,
+      0.99991727,
+      0.99993324,
+      0.999941,
+      0.9999402,
+      0.9999338,
+      0.9999459
+    ],
+    [
+      1.0,
+      1.0,
+      1.0,
+      1.0,
+      0.9984219,
+      0.99898016,
+      0.9992762,
+      0.9994593,
+      0.99964696,
+      0.9998213,
+      0.9998534,
+      0.9998702,
+      0.9998866,
+      0.9998915,
+      0.99989337,
+      0.9999232
+    ],
+    [
+      1.0,
+      1.0,
+      1.0,
+      1.0,
+      1.0000001,
+      0.9982159,
+      0.99882984,
+      0.99912095,
+      0.99943227,
+      0.9997085,
+      0.9997768,
+      0.99979776,
+      0.99982584,
+      0.9998293,
+      0.9998315,
+      0.99987525
+    ],
+    [
+      1.0,
+      1.0,
+      1.0,
+      1.0,
+      1.0000001,
+      1.0,
+      0.99816424,
+      0.99876094,
+      0.99919754,
+      0.9995639,
+      0.9996586,
+      0.99971133,
+      0.9997589,
+      0.99975854,
+      0.9997636,
+      0.9998148
+    ],
+    [
+      1.0,
+      1.0,
+      1.0,
+      1.0,
+      1.0000001,
+      1.0,
+      1.0000001,
+      0.99780136,
+      0.9987421,
+      0.99931645,
+      0.9994794,
+      0.9995551,
+      0.9996369,
+      0.99963874,
+      0.9996426,
+      0.99973243
+    ],
+    [
+      1.0,
+      1.0,
+      1.0,
+      1.0,
+      1.0000001,
+      1.0,
+      1.0000001,
+      0.99999994,
+      0.9966222,
+      0.99799246,
+      0.99849427,
+      0.9988063,
+      0.9989548,
+      0.9989306,
+      0.99883133,
+      0.9989927
+    ],
+    [
+      1.0,
+      1.0,
+      1.0,
+      1.0,
+      1.0000001,
+      1.0,
+      1.0000001,
+      0.99999994,
+      1.0000001,
+      0.9958788,
+      0.9970365,
+      0.99759966,
+      0.99795216,
+      0.9978099,
+      0.9976225,
+      0.9977946
+    ],
+    [
+      1.0,
+      1.0,
+      1.0,
+      1.0,
+      1.0000001,
+      1.0,
+      1.0000001,
+      0.99999994,
+      1.0000001,
+      1.0,
+      0.99449,
+      0.995399,
+      0.99603057,
+      0.9955957,
+      0.99515307,
+      0.9951659
+    ],
+    [
+      1.0,
+      1.0,
+      1.0,
+      1.0,
+      1.0000001,
+      1.0,
+      1.0000001,
+      0.99999994,
+      1.0000001,
+      1.0,
+      1.0000001,
+      0.99480814,
+      0.995499,
+      0.99493665,
+      0.99446553,
+      0.9945897
+    ],
+    [
+      1.0,
+      1.0,
+      1.0,
+      1.0,
+      1.0000001,
+      1.0,
+      1.0000001,
+      0.99999994,
+      1.0000001,
+      1.0,
+      1.0000001,
+      0.99999994,
+      0.99462295,
+      0.9938592,
+      0.9931835,
+      0.99307436
+    ],
+    [
+      1.0,
+      1.0,
+      1.0,
+      1.0,
+      1.0000001,
+      1.0,
+      1.0000001,
+      0.99999994,
+      1.0000001,
+      1.0,
+      1.0000001,
+      0.99999994,
+      1.0,
+      0.99320984,
+      0.99255496,
+      0.99222654
+    ],
+    [
+      1.0,
+      1.0,
+      1.0,
+      1.0,
+      1.0000001,
+      1.0,
+      1.0000001,
+      0.99999994,
+      1.0000001,
+      1.0,
+      1.0000001,
+      0.99999994,
+      1.0,
+      1.0000001,
+      0.99117494,
+      0.99058914
+    ],
+    [
+      1.0,
+      1.0,
+      1.0,
+      1.0,
+      1.0000001,
+      1.0,
+      1.0000001,
+      0.99999994,
+      1.0000001,
+      1.0,
+      1.0000001,
+      0.99999994,
+      1.0,
+      1.0000001,
+      1.0000001,
+      0.9883507
+    ],
+    [
+      1.0,
+      1.0,
+      1.0,
+      1.0,
+      1.0000001,
+      1.0,
+      1.0000001,
+      0.99999994,
+      1.0000001,
+      1.0,
+      1.0000001,
+      0.99999994,
+      1.0,
+      1.0000001,
+      1.0000001,
+      1.0
+    ]
+  ],
+  "layer_summaries": [
+    {
+      "injection_layer": 0,
+      "p_target": 0.0041473736,
+      "kl_divergence": 0.000051691735,
+      "absorption_layer": 1
+    },
+    {
+      "injection_layer": 1,
+      "p_target": 0.0042121178,
+      "kl_divergence": 0.000118076336,
+      "absorption_layer": 2
+    },
+    {
+      "injection_layer": 2,
+      "p_target": 0.00432583,
+      "kl_divergence": 0.00025845895,
+      "absorption_layer": 3
+    },
+    {
+      "injection_layer": 3,
+      "p_target": 0.0042412537,
+      "kl_divergence": 0.00056354125,
+      "absorption_layer": 4
+    },
+    {
+      "injection_layer": 4,
+      "p_target": 0.0042358767,
+      "kl_divergence": 0.00096342067,
+      "absorption_layer": 5
+    },
+    {
+      "injection_layer": 5,
+      "p_target": 0.0042022527,
+      "kl_divergence": 0.0014453608,
+      "absorption_layer": 6
+    },
+    {
+      "injection_layer": 6,
+      "p_target": 0.0041972133,
+      "kl_divergence": 0.0024281798,
+      "absorption_layer": 7
+    },
+    {
+      "injection_layer": 7,
+      "p_target": 0.0038836915,
+      "kl_divergence": 0.00922232,
+      "absorption_layer": 8
+    },
+    {
+      "injection_layer": 8,
+      "p_target": 0.004182137,
+      "kl_divergence": 0.01616834,
+      "absorption_layer": 9
+    },
+    {
+      "injection_layer": 9,
+      "p_target": 0.004392639,
+      "kl_divergence": 0.042477783,
+      "absorption_layer": 10
+    },
+    {
+      "injection_layer": 10,
+      "p_target": 0.0042154733,
+      "kl_divergence": 0.04617345,
+      "absorption_layer": 11
+    },
+    {
+      "injection_layer": 11,
+      "p_target": 0.0041998653,
+      "kl_divergence": 0.05748706,
+      "absorption_layer": 12
+    },
+    {
+      "injection_layer": 12,
+      "p_target": 0.004137709,
+      "kl_divergence": 0.06309224,
+      "absorption_layer": 13
+    },
+    {
+      "injection_layer": 13,
+      "p_target": 0.003959884,
+      "kl_divergence": 0.078021936,
+      "absorption_layer": 14
+    },
+    {
+      "injection_layer": 14,
+      "p_target": 0.0038899293,
+      "kl_divergence": 0.09008031,
+      "absorption_layer": 15
+    },
+    {
+      "injection_layer": 15,
+      "p_target": 0.0037698718,
+      "kl_divergence": 0.11147565,
+      "absorption_layer": null
+    }
+  ],
+  "best_injection_layer": 14,
+  "strength_sweep": [
+    {
+      "strength": 0.5,
+      "p_target": 0.0040876614,
+      "kl_divergence": 0.022383654,
+      "absorption_layer": 15
+    },
+    {
+      "strength": 1.0,
+      "p_target": 0.0038899293,
+      "kl_divergence": 0.09008031,
+      "absorption_layer": 15
+    },
+    {
+      "strength": 1.5,
+      "p_target": 0.00352559,
+      "kl_divergence": 0.20139003,
+      "absorption_layer": 15
+    },
+    {
+      "strength": 2.0,
+      "p_target": 0.0030490141,
+      "kl_divergence": 0.35157546,
+      "absorption_layer": 15
+    },
+    {
+      "strength": 2.5,
+      "p_target": 0.002527501,
+      "kl_divergence": 0.53375643,
+      "absorption_layer": null
+    },
+    {
+      "strength": 3.0,
+      "p_target": 0.0020218184,
+      "kl_divergence": 0.73992044,
+      "absorption_layer": null
+    },
+    {
+      "strength": 3.5,
+      "p_target": 0.0015729165,
+      "kl_divergence": 0.9618491,
+      "absorption_layer": null
+    },
+    {
+      "strength": 4.0,
+      "p_target": 0.0011998665,
+      "kl_divergence": 1.1918619,
+      "absorption_layer": null
+    },
+    {
+      "strength": 4.5,
+      "p_target": 0.00090453855,
+      "kl_divergence": 1.4234394,
+      "absorption_layer": null
+    },
+    {
+      "strength": 5.0,
+      "p_target": 0.00067858805,
+      "kl_divergence": 1.6514165,
+      "absorption_layer": null
+    },
+    {
+      "strength": 5.5,
+      "p_target": 0.0005095019,
+      "kl_divergence": 1.8719894,
+      "absorption_layer": null
+    },
+    {
+      "strength": 6.0,
+      "p_target": 0.00038458637,
+      "kl_divergence": 2.0824115,
+      "absorption_layer": null
+    }
+  ],
+  "threshold": 0.95
+}

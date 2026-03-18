@@ -1,0 +1,501 @@
+{
+  "model_id": "meta-llama/Llama-3.2-1B",
+  "prompt": "The sailor gazed across the sea And longed for home and family She taught the little ones to pray And left behind a lonely",
+  "contrastive_prompt": "The sailor gazed across the sea And longed for home and family She taught the little ones to plea And left behind a lonely",
+  "n_layers": 16,
+  "hidden_size": 2048,
+  "target_token": " display",
+  "target_token_id": 3113,
+  "baseline_p_target": 0.0000017201053,
+  "baseline_top5": [
+    {
+      "token": " heart",
+      "token_id": 4851,
+      "probability": 0.39876902
+    },
+    {
+      "token": " wife",
+      "token_id": 7555,
+      "probability": 0.07923827
+    },
+    {
+      "token": " life",
+      "token_id": 2324,
+      "probability": 0.050884668
+    },
+    {
+      "token": " soul",
+      "token_id": 13836,
+      "probability": 0.033589825
+    },
+    {
+      "token": " place",
+      "token_id": 2035,
+      "probability": 0.029957289
+    }
+  ],
+  "convergence_matrix": [
+    [
+      0.9999999,
+      0.9980092,
+      0.9984726,
+      0.999002,
+      0.99948525,
+      0.9995631,
+      0.999654,
+      0.99973136,
+      0.9997916,
+      0.99986535,
+      0.99989325,
+      0.99991727,
+      0.9999278,
+      0.99992615,
+      0.9999319,
+      0.999935
+    ],
+    [
+      0.9999999,
+      1.0,
+      0.99794555,
+      0.99870414,
+      0.9993934,
+      0.9994848,
+      0.9996304,
+      0.9997229,
+      0.99979264,
+      0.9998807,
+      0.9999051,
+      0.99992037,
+      0.9999313,
+      0.9999274,
+      0.9999331,
+      0.99994
+    ],
+    [
+      0.9999999,
+      1.0,
+      1.0000001,
+      0.99831337,
+      0.9991807,
+      0.9993342,
+      0.99953026,
+      0.99965125,
+      0.9997442,
+      0.99985635,
+      0.9998854,
+      0.99990356,
+      0.9999184,
+      0.999918,
+      0.999925,
+      0.9999327
+    ],
+    [
+      0.9999999,
+      1.0,
+      1.0000001,
+      1.0,
+      0.99832535,
+      0.9987082,
+      0.9990609,
+      0.99930334,
+      0.999528,
+      0.9997197,
+      0.9997636,
+      0.9997982,
+      0.9998301,
+      0.9998327,
+      0.9998406,
+      0.99984723
+    ],
+    [
+      0.9999999,
+      1.0,
+      1.0000001,
+      1.0,
+      1.0,
+      0.9973688,
+      0.9978856,
+      0.99828756,
+      0.9987927,
+      0.9992082,
+      0.99936587,
+      0.9994995,
+      0.99958444,
+      0.99961865,
+      0.9996158,
+      0.9995935
+    ],
+    [
+      0.9999999,
+      1.0,
+      1.0000001,
+      1.0,
+      1.0,
+      1.0,
+      0.99701184,
+      0.99754596,
+      0.9982304,
+      0.99888873,
+      0.99912286,
+      0.9993134,
+      0.999427,
+      0.9994835,
+      0.9994678,
+      0.9994143
+    ],
+    [
+      0.9999999,
+      1.0,
+      1.0000001,
+      1.0,
+      1.0,
+      1.0,
+      1.0,
+      0.9961566,
+      0.99712354,
+      0.99809986,
+      0.9985722,
+      0.9989062,
+      0.9991078,
+      0.99916655,
+      0.99914515,
+      0.99899584
+    ],
+    [
+      0.9999999,
+      1.0,
+      1.0000001,
+      1.0,
+      1.0,
+      1.0,
+      1.0,
+      0.99999994,
+      0.9959198,
+      0.9975141,
+      0.9981714,
+      0.99865353,
+      0.99890053,
+      0.99896646,
+      0.99897695,
+      0.99881154
+    ],
+    [
+      0.9999999,
+      1.0,
+      1.0000001,
+      1.0,
+      1.0,
+      1.0,
+      1.0,
+      0.99999994,
+      1.0,
+      0.99546725,
+      0.9966683,
+      0.9976341,
+      0.9981389,
+      0.9983103,
+      0.99832064,
+      0.99791414
+    ],
+    [
+      0.9999999,
+      1.0,
+      1.0000001,
+      1.0,
+      1.0,
+      1.0,
+      1.0,
+      0.99999994,
+      1.0,
+      1.0000001,
+      0.99542826,
+      0.99632394,
+      0.9969398,
+      0.9970447,
+      0.9969535,
+      0.9959365
+    ],
+    [
+      0.9999999,
+      1.0,
+      1.0000001,
+      1.0,
+      1.0,
+      1.0,
+      1.0,
+      0.99999994,
+      1.0,
+      1.0000001,
+      1.0,
+      0.9962821,
+      0.99684125,
+      0.99694437,
+      0.99687916,
+      0.99575746
+    ],
+    [
+      0.9999999,
+      1.0,
+      1.0000001,
+      1.0,
+      1.0,
+      1.0,
+      1.0,
+      0.99999994,
+      1.0,
+      1.0000001,
+      1.0,
+      1.0,
+      0.9964928,
+      0.996666,
+      0.9966827,
+      0.9942716
+    ],
+    [
+      0.9999999,
+      1.0,
+      1.0000001,
+      1.0,
+      1.0,
+      1.0,
+      1.0,
+      0.99999994,
+      1.0,
+      1.0000001,
+      1.0,
+      1.0,
+      1.0,
+      0.996031,
+      0.99601793,
+      0.9927201
+    ],
+    [
+      0.9999999,
+      1.0,
+      1.0000001,
+      1.0,
+      1.0,
+      1.0,
+      1.0,
+      0.99999994,
+      1.0,
+      1.0000001,
+      1.0,
+      1.0,
+      1.0,
+      1.0,
+      0.99493515,
+      0.99065936
+    ],
+    [
+      0.9999999,
+      1.0,
+      1.0000001,
+      1.0,
+      1.0,
+      1.0,
+      1.0,
+      0.99999994,
+      1.0,
+      1.0000001,
+      1.0,
+      1.0,
+      1.0,
+      1.0,
+      0.9999999,
+      0.98383605
+    ],
+    [
+      0.9999999,
+      1.0,
+      1.0000001,
+      1.0,
+      1.0,
+      1.0,
+      1.0,
+      0.99999994,
+      1.0,
+      1.0000001,
+      1.0,
+      1.0,
+      1.0,
+      1.0,
+      0.9999999,
+      1.0
+    ]
+  ],
+  "layer_summaries": [
+    {
+      "injection_layer": 0,
+      "p_target": 0.000001643051,
+      "kl_divergence": 0.00040047828,
+      "absorption_layer": 1
+    },
+    {
+      "injection_layer": 1,
+      "p_target": 0.000001657469,
+      "kl_divergence": 0.00036450307,
+      "absorption_layer": 2
+    },
+    {
+      "injection_layer": 2,
+      "p_target": 0.0000016754991,
+      "kl_divergence": 0.00045820462,
+      "absorption_layer": 3
+    },
+    {
+      "injection_layer": 3,
+      "p_target": 0.0000017147933,
+      "kl_divergence": 0.0014714058,
+      "absorption_layer": 4
+    },
+    {
+      "injection_layer": 4,
+      "p_target": 0.000001674061,
+      "kl_divergence": 0.0029443898,
+      "absorption_layer": 5
+    },
+    {
+      "injection_layer": 5,
+      "p_target": 0.000001711083,
+      "kl_divergence": 0.0039756917,
+      "absorption_layer": 6
+    },
+    {
+      "injection_layer": 6,
+      "p_target": 0.000001672317,
+      "kl_divergence": 0.0058264006,
+      "absorption_layer": 7
+    },
+    {
+      "injection_layer": 7,
+      "p_target": 0.0000015892051,
+      "kl_divergence": 0.006485297,
+      "absorption_layer": 8
+    },
+    {
+      "injection_layer": 8,
+      "p_target": 0.000001787898,
+      "kl_divergence": 0.009203584,
+      "absorption_layer": 9
+    },
+    {
+      "injection_layer": 9,
+      "p_target": 0.0000018382295,
+      "kl_divergence": 0.028096916,
+      "absorption_layer": 10
+    },
+    {
+      "injection_layer": 10,
+      "p_target": 0.0000017141034,
+      "kl_divergence": 0.03039029,
+      "absorption_layer": 11
+    },
+    {
+      "injection_layer": 11,
+      "p_target": 0.0000014507655,
+      "kl_divergence": 0.030869544,
+      "absorption_layer": 12
+    },
+    {
+      "injection_layer": 12,
+      "p_target": 0.0000014715633,
+      "kl_divergence": 0.030263314,
+      "absorption_layer": 13
+    },
+    {
+      "injection_layer": 13,
+      "p_target": 0.0000014008972,
+      "kl_divergence": 0.040613007,
+      "absorption_layer": 14
+    },
+    {
+      "injection_layer": 14,
+      "p_target": 0.0000013035389,
+      "kl_divergence": 0.044321552,
+      "absorption_layer": 15
+    },
+    {
+      "injection_layer": 15,
+      "p_target": 0.0000022002907,
+      "kl_divergence": 0.078515865,
+      "absorption_layer": null
+    }
+  ],
+  "best_injection_layer": 14,
+  "strength_sweep": [
+    {
+      "strength": 0.5,
+      "p_target": 0.000001479945,
+      "kl_divergence": 0.011234989,
+      "absorption_layer": 15
+    },
+    {
+      "strength": 1.0,
+      "p_target": 0.0000013035389,
+      "kl_divergence": 0.044321552,
+      "absorption_layer": 15
+    },
+    {
+      "strength": 1.5,
+      "p_target": 0.0000011735124,
+      "kl_divergence": 0.09829823,
+      "absorption_layer": 15
+    },
+    {
+      "strength": 2.0,
+      "p_target": 0.0000010747387,
+      "kl_divergence": 0.17236231,
+      "absorption_layer": null
+    },
+    {
+      "strength": 2.5,
+      "p_target": 9.951019e-7,
+      "kl_divergence": 0.265876,
+      "absorption_layer": null
+    },
+    {
+      "strength": 3.0,
+      "p_target": 9.2604876e-7,
+      "kl_divergence": 0.37819406,
+      "absorption_layer": null
+    },
+    {
+      "strength": 3.5,
+      "p_target": 8.623296e-7,
+      "kl_divergence": 0.50858855,
+      "absorption_layer": null
+    },
+    {
+      "strength": 4.0,
+      "p_target": 8.013011e-7,
+      "kl_divergence": 0.656105,
+      "absorption_layer": null
+    },
+    {
+      "strength": 4.5,
+      "p_target": 7.4214745e-7,
+      "kl_divergence": 0.8195591,
+      "absorption_layer": null
+    },
+    {
+      "strength": 5.0,
+      "p_target": 6.850852e-7,
+      "kl_divergence": 0.99747455,
+      "absorption_layer": null
+    },
+    {
+      "strength": 5.5,
+      "p_target": 6.3078596e-7,
+      "kl_divergence": 1.1880599,
+      "absorption_layer": null
+    },
+    {
+      "strength": 6.0,
+      "p_target": 5.8010573e-7,
+      "kl_divergence": 1.3888099,
+      "absorption_layer": null
+    }
+  ],
+  "threshold": 0.95
+}

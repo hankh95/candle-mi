@@ -1,0 +1,501 @@
+{
+  "model_id": "meta-llama/Llama-3.2-1B",
+  "prompt": "The sailor gazed across the sea And longed for home and family He tried his very best to found The moment made the whole world",
+  "contrastive_prompt": "The sailor gazed across the sea And longed for home and family He tried his very best to dove The moment made the whole world",
+  "n_layers": 16,
+  "hidden_size": 2048,
+  "target_token": " crowned",
+  "target_token_id": 79743,
+  "baseline_p_target": 2.0022317e-7,
+  "baseline_top5": [
+    {
+      "token": " seem",
+      "token_id": 2873,
+      "probability": 0.062177572
+    },
+    {
+      "token": " stand",
+      "token_id": 2559,
+      "probability": 0.049542792
+    },
+    {
+      "token": " shine",
+      "token_id": 33505,
+      "probability": 0.02881808
+    },
+    {
+      "token": " still",
+      "token_id": 2103,
+      "probability": 0.02547087
+    },
+    {
+      "token": " sing",
+      "token_id": 7936,
+      "probability": 0.02057466
+    }
+  ],
+  "convergence_matrix": [
+    [
+      0.99999994,
+      0.9996022,
+      0.9997768,
+      0.9998144,
+      0.9998969,
+      0.9999289,
+      0.99994177,
+      0.9999595,
+      0.9999694,
+      0.99997765,
+      0.9999777,
+      0.99998015,
+      0.9999806,
+      0.9999787,
+      0.99997646,
+      0.99998
+    ],
+    [
+      0.99999994,
+      1.0000001,
+      0.99926823,
+      0.9993865,
+      0.9996371,
+      0.9997503,
+      0.99979424,
+      0.9998646,
+      0.9999073,
+      0.9999332,
+      0.99993324,
+      0.9999337,
+      0.99992096,
+      0.9999054,
+      0.9998916,
+      0.9999047
+    ],
+    [
+      0.99999994,
+      1.0000001,
+      1.0,
+      0.99692243,
+      0.99789554,
+      0.99851745,
+      0.99871653,
+      0.9991672,
+      0.99940956,
+      0.99951667,
+      0.9994791,
+      0.999544,
+      0.9994728,
+      0.99940956,
+      0.99938494,
+      0.9994899
+    ],
+    [
+      0.99999994,
+      1.0000001,
+      1.0,
+      0.99999994,
+      0.9958822,
+      0.99696225,
+      0.9974846,
+      0.99827427,
+      0.99883646,
+      0.9991597,
+      0.9991965,
+      0.9993155,
+      0.99921376,
+      0.99911356,
+      0.9990599,
+      0.9991765
+    ],
+    [
+      0.99999994,
+      1.0000001,
+      1.0,
+      0.99999994,
+      1.0,
+      0.9932646,
+      0.9945175,
+      0.99633557,
+      0.99742305,
+      0.99851656,
+      0.9987174,
+      0.99898964,
+      0.99904996,
+      0.999032,
+      0.99906164,
+      0.99921036
+    ],
+    [
+      0.99999994,
+      1.0000001,
+      1.0,
+      0.99999994,
+      1.0,
+      1.0,
+      0.99187684,
+      0.9948525,
+      0.9962349,
+      0.99785244,
+      0.99820685,
+      0.9986278,
+      0.9986177,
+      0.99848294,
+      0.99849427,
+      0.9987192
+    ],
+    [
+      0.99999994,
+      1.0000001,
+      1.0,
+      0.99999994,
+      1.0,
+      1.0,
+      1.0000001,
+      0.99067277,
+      0.9935674,
+      0.99617857,
+      0.99670947,
+      0.9974123,
+      0.99743354,
+      0.9972964,
+      0.9973396,
+      0.9977019
+    ],
+    [
+      0.99999994,
+      1.0000001,
+      1.0,
+      0.99999994,
+      1.0,
+      1.0,
+      1.0000001,
+      1.0,
+      0.98992014,
+      0.9939441,
+      0.9949982,
+      0.9960304,
+      0.99602836,
+      0.99576825,
+      0.99574804,
+      0.99636066
+    ],
+    [
+      0.99999994,
+      1.0000001,
+      1.0,
+      0.99999994,
+      1.0,
+      1.0,
+      1.0000001,
+      1.0,
+      1.0,
+      0.99029726,
+      0.9916833,
+      0.9935579,
+      0.9932389,
+      0.9923743,
+      0.9923069,
+      0.9931254
+    ],
+    [
+      0.99999994,
+      1.0000001,
+      1.0,
+      0.99999994,
+      1.0,
+      1.0,
+      1.0000001,
+      1.0,
+      1.0,
+      1.0,
+      0.9859608,
+      0.9887789,
+      0.9874505,
+      0.9862497,
+      0.98616403,
+      0.98703575
+    ],
+    [
+      0.99999994,
+      1.0000001,
+      1.0,
+      0.99999994,
+      1.0,
+      1.0,
+      1.0000001,
+      1.0,
+      1.0,
+      1.0,
+      1.0,
+      0.98819447,
+      0.98690194,
+      0.9856613,
+      0.98553896,
+      0.98620355
+    ],
+    [
+      0.99999994,
+      1.0000001,
+      1.0,
+      0.99999994,
+      1.0,
+      1.0,
+      1.0000001,
+      1.0,
+      1.0,
+      1.0,
+      1.0,
+      1.0,
+      0.98492306,
+      0.9840283,
+      0.9839397,
+      0.9848098
+    ],
+    [
+      0.99999994,
+      1.0000001,
+      1.0,
+      0.99999994,
+      1.0,
+      1.0,
+      1.0000001,
+      1.0,
+      1.0,
+      1.0,
+      1.0,
+      1.0,
+      0.9999999,
+      0.9802114,
+      0.9791805,
+      0.9805237
+    ],
+    [
+      0.99999994,
+      1.0000001,
+      1.0,
+      0.99999994,
+      1.0,
+      1.0,
+      1.0000001,
+      1.0,
+      1.0,
+      1.0,
+      1.0,
+      1.0,
+      0.9999999,
+      0.99999994,
+      0.9753829,
+      0.9760666
+    ],
+    [
+      0.99999994,
+      1.0000001,
+      1.0,
+      0.99999994,
+      1.0,
+      1.0,
+      1.0000001,
+      1.0,
+      1.0,
+      1.0,
+      1.0,
+      1.0,
+      0.9999999,
+      0.99999994,
+      1.0,
+      0.96811265
+    ],
+    [
+      0.99999994,
+      1.0000001,
+      1.0,
+      0.99999994,
+      1.0,
+      1.0,
+      1.0000001,
+      1.0,
+      1.0,
+      1.0,
+      1.0,
+      1.0,
+      0.9999999,
+      0.99999994,
+      1.0,
+      1.0
+    ]
+  ],
+  "layer_summaries": [
+    {
+      "injection_layer": 0,
+      "p_target": 1.9401953e-7,
+      "kl_divergence": 0.00023608639,
+      "absorption_layer": 1
+    },
+    {
+      "injection_layer": 1,
+      "p_target": 1.90034e-7,
+      "kl_divergence": 0.0013573319,
+      "absorption_layer": 2
+    },
+    {
+      "injection_layer": 2,
+      "p_target": 1.814759e-7,
+      "kl_divergence": 0.0064268494,
+      "absorption_layer": 3
+    },
+    {
+      "injection_layer": 3,
+      "p_target": 1.9238722e-7,
+      "kl_divergence": 0.01126055,
+      "absorption_layer": 4
+    },
+    {
+      "injection_layer": 4,
+      "p_target": 1.9328182e-7,
+      "kl_divergence": 0.008919913,
+      "absorption_layer": 5
+    },
+    {
+      "injection_layer": 5,
+      "p_target": 1.8483826e-7,
+      "kl_divergence": 0.02185873,
+      "absorption_layer": 6
+    },
+    {
+      "injection_layer": 6,
+      "p_target": 1.8907917e-7,
+      "kl_divergence": 0.036426917,
+      "absorption_layer": 7
+    },
+    {
+      "injection_layer": 7,
+      "p_target": 1.8224154e-7,
+      "kl_divergence": 0.05460556,
+      "absorption_layer": 8
+    },
+    {
+      "injection_layer": 8,
+      "p_target": 2.3797186e-7,
+      "kl_divergence": 0.13460141,
+      "absorption_layer": 9
+    },
+    {
+      "injection_layer": 9,
+      "p_target": 2.918502e-7,
+      "kl_divergence": 0.21757147,
+      "absorption_layer": 10
+    },
+    {
+      "injection_layer": 10,
+      "p_target": 2.4857815e-7,
+      "kl_divergence": 0.22575706,
+      "absorption_layer": 11
+    },
+    {
+      "injection_layer": 11,
+      "p_target": 1.9562157e-7,
+      "kl_divergence": 0.24231909,
+      "absorption_layer": 12
+    },
+    {
+      "injection_layer": 12,
+      "p_target": 2.213223e-7,
+      "kl_divergence": 0.30967313,
+      "absorption_layer": 13
+    },
+    {
+      "injection_layer": 13,
+      "p_target": 2.6734574e-7,
+      "kl_divergence": 0.32147613,
+      "absorption_layer": 14
+    },
+    {
+      "injection_layer": 14,
+      "p_target": 1.782731e-7,
+      "kl_divergence": 0.31829163,
+      "absorption_layer": 15
+    },
+    {
+      "injection_layer": 15,
+      "p_target": 2.1825566e-7,
+      "kl_divergence": 0.303959,
+      "absorption_layer": null
+    }
+  ],
+  "best_injection_layer": 14,
+  "strength_sweep": [
+    {
+      "strength": 0.5,
+      "p_target": 1.9483284e-7,
+      "kl_divergence": 0.0791667,
+      "absorption_layer": 15
+    },
+    {
+      "strength": 1.0,
+      "p_target": 1.782731e-7,
+      "kl_divergence": 0.31829163,
+      "absorption_layer": 15
+    },
+    {
+      "strength": 1.5,
+      "p_target": 1.5688596e-7,
+      "kl_divergence": 0.7049444,
+      "absorption_layer": null
+    },
+    {
+      "strength": 2.0,
+      "p_target": 1.3911846e-7,
+      "kl_divergence": 1.2006627,
+      "absorption_layer": null
+    },
+    {
+      "strength": 2.5,
+      "p_target": 1.3148166e-7,
+      "kl_divergence": 1.7477393,
+      "absorption_layer": null
+    },
+    {
+      "strength": 3.0,
+      "p_target": 1.3717992e-7,
+      "kl_divergence": 2.289036,
+      "absorption_layer": null
+    },
+    {
+      "strength": 3.5,
+      "p_target": 1.57474e-7,
+      "kl_divergence": 2.7864118,
+      "absorption_layer": null
+    },
+    {
+      "strength": 4.0,
+      "p_target": 1.9270747e-7,
+      "kl_divergence": 3.2281466,
+      "absorption_layer": null
+    },
+    {
+      "strength": 4.5,
+      "p_target": 2.4210735e-7,
+      "kl_divergence": 3.6172366,
+      "absorption_layer": null
+    },
+    {
+      "strength": 5.0,
+      "p_target": 3.0336886e-7,
+      "kl_divergence": 3.9629593,
+      "absorption_layer": null
+    },
+    {
+      "strength": 5.5,
+      "p_target": 3.7289078e-7,
+      "kl_divergence": 4.274642,
+      "absorption_layer": null
+    },
+    {
+      "strength": 6.0,
+      "p_target": 4.4658117e-7,
+      "kl_divergence": 4.558183,
+      "absorption_layer": null
+    }
+  ],
+  "threshold": 0.95
+}

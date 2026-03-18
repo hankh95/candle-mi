@@ -1,0 +1,501 @@
+{
+  "model_id": "meta-llama/Llama-3.2-1B",
+  "prompt": "The robin perched upon a tree And sang its song so wild and free She taught the little ones to proclaim And placed it gently on the",
+  "contrastive_prompt": "The robin perched upon a tree And sang its song so wild and free She taught the little ones to hand And placed it gently on the",
+  "n_layers": 16,
+  "hidden_size": 2048,
+  "target_token": " game",
+  "target_token_id": 1847,
+  "baseline_p_target": 0.000032022563,
+  "baseline_top5": [
+    {
+      "token": " ground",
+      "token_id": 5015,
+      "probability": 0.43044373
+    },
+    {
+      "token": " tree",
+      "token_id": 5021,
+      "probability": 0.09225991
+    },
+    {
+      "token": " grave",
+      "token_id": 25165,
+      "probability": 0.03145482
+    },
+    {
+      "token": " floor",
+      "token_id": 6558,
+      "probability": 0.026216151
+    },
+    {
+      "token": " page",
+      "token_id": 2199,
+      "probability": 0.020260476
+    }
+  ],
+  "convergence_matrix": [
+    [
+      1.0000001,
+      0.9989239,
+      0.9995363,
+      0.9997462,
+      0.9998632,
+      0.9999077,
+      0.9999367,
+      0.99995464,
+      0.9999695,
+      0.9999845,
+      0.99998915,
+      0.999991,
+      0.9999914,
+      0.9999927,
+      0.9999915,
+      0.99998885
+    ],
+    [
+      1.0000001,
+      1.0,
+      0.9974933,
+      0.9986801,
+      0.9992828,
+      0.99955934,
+      0.99968845,
+      0.99975115,
+      0.99980366,
+      0.9999006,
+      0.9999331,
+      0.9999523,
+      0.99995756,
+      0.99996567,
+      0.9999643,
+      0.99995744
+    ],
+    [
+      1.0000001,
+      1.0,
+      1.0,
+      0.9952511,
+      0.99710673,
+      0.99810266,
+      0.9987776,
+      0.9990515,
+      0.9993462,
+      0.99966043,
+      0.99978507,
+      0.99985397,
+      0.9998762,
+      0.9999011,
+      0.9999031,
+      0.9998846
+    ],
+    [
+      1.0000001,
+      1.0,
+      1.0,
+      1.0,
+      0.9937688,
+      0.9962852,
+      0.9974804,
+      0.9984793,
+      0.9991365,
+      0.99960107,
+      0.99972945,
+      0.9998113,
+      0.9998408,
+      0.99986416,
+      0.99986327,
+      0.99984765
+    ],
+    [
+      1.0000001,
+      1.0,
+      1.0,
+      1.0,
+      1.0,
+      0.99355197,
+      0.99571925,
+      0.9973369,
+      0.9983338,
+      0.99910647,
+      0.99938995,
+      0.9995669,
+      0.99963754,
+      0.9996811,
+      0.99968314,
+      0.9996335
+    ],
+    [
+      1.0000001,
+      1.0,
+      1.0,
+      1.0,
+      1.0,
+      1.0,
+      0.9933561,
+      0.9947491,
+      0.99649745,
+      0.9981112,
+      0.9988055,
+      0.9990801,
+      0.9991833,
+      0.99932057,
+      0.99931335,
+      0.99924606
+    ],
+    [
+      1.0000001,
+      1.0,
+      1.0,
+      1.0,
+      1.0,
+      1.0,
+      1.0000001,
+      0.99201787,
+      0.99508893,
+      0.9975763,
+      0.99860394,
+      0.9989686,
+      0.99908227,
+      0.9992147,
+      0.99913096,
+      0.9989834
+    ],
+    [
+      1.0000001,
+      1.0,
+      1.0,
+      1.0,
+      1.0,
+      1.0,
+      1.0000001,
+      1.0,
+      0.9918892,
+      0.99606436,
+      0.9975765,
+      0.9983997,
+      0.99859345,
+      0.9988429,
+      0.9988499,
+      0.99871707
+    ],
+    [
+      1.0000001,
+      1.0,
+      1.0,
+      1.0,
+      1.0,
+      1.0,
+      1.0000001,
+      1.0,
+      0.99999994,
+      0.99303454,
+      0.9957371,
+      0.9971526,
+      0.9977188,
+      0.99819505,
+      0.9982621,
+      0.9981781
+    ],
+    [
+      1.0000001,
+      1.0,
+      1.0,
+      1.0,
+      1.0,
+      1.0,
+      1.0000001,
+      1.0,
+      0.99999994,
+      1.0,
+      0.99278575,
+      0.9948294,
+      0.9955604,
+      0.9963501,
+      0.99633414,
+      0.99598163
+    ],
+    [
+      1.0000001,
+      1.0,
+      1.0,
+      1.0,
+      1.0,
+      1.0,
+      1.0000001,
+      1.0,
+      0.99999994,
+      1.0,
+      1.0000001,
+      0.9911378,
+      0.99221337,
+      0.9932282,
+      0.9930772,
+      0.9923973
+    ],
+    [
+      1.0000001,
+      1.0,
+      1.0,
+      1.0,
+      1.0,
+      1.0,
+      1.0000001,
+      1.0,
+      0.99999994,
+      1.0,
+      1.0000001,
+      1.0,
+      0.99062467,
+      0.9916969,
+      0.9911087,
+      0.9902305
+    ],
+    [
+      1.0000001,
+      1.0,
+      1.0,
+      1.0,
+      1.0,
+      1.0,
+      1.0000001,
+      1.0,
+      0.99999994,
+      1.0,
+      1.0000001,
+      1.0,
+      1.0,
+      0.9906356,
+      0.9895687,
+      0.9874936
+    ],
+    [
+      1.0000001,
+      1.0,
+      1.0,
+      1.0,
+      1.0,
+      1.0,
+      1.0000001,
+      1.0,
+      0.99999994,
+      1.0,
+      1.0000001,
+      1.0,
+      1.0,
+      0.99999994,
+      0.9878338,
+      0.98493403
+    ],
+    [
+      1.0000001,
+      1.0,
+      1.0,
+      1.0,
+      1.0,
+      1.0,
+      1.0000001,
+      1.0,
+      0.99999994,
+      1.0,
+      1.0000001,
+      1.0,
+      1.0,
+      0.99999994,
+      1.0000001,
+      0.9812203
+    ],
+    [
+      1.0000001,
+      1.0,
+      1.0,
+      1.0,
+      1.0,
+      1.0,
+      1.0000001,
+      1.0,
+      0.99999994,
+      1.0,
+      1.0000001,
+      1.0,
+      1.0,
+      0.99999994,
+      1.0000001,
+      1.0
+    ]
+  ],
+  "layer_summaries": [
+    {
+      "injection_layer": 0,
+      "p_target": 0.000032265936,
+      "kl_divergence": 0.00005944116,
+      "absorption_layer": 1
+    },
+    {
+      "injection_layer": 1,
+      "p_target": 0.000032263353,
+      "kl_divergence": 0.00015050267,
+      "absorption_layer": 2
+    },
+    {
+      "injection_layer": 2,
+      "p_target": 0.000032522315,
+      "kl_divergence": 0.0002940459,
+      "absorption_layer": 3
+    },
+    {
+      "injection_layer": 3,
+      "p_target": 0.00003159621,
+      "kl_divergence": 0.0004688613,
+      "absorption_layer": 4
+    },
+    {
+      "injection_layer": 4,
+      "p_target": 0.00003303117,
+      "kl_divergence": 0.0012196263,
+      "absorption_layer": 5
+    },
+    {
+      "injection_layer": 5,
+      "p_target": 0.000031622185,
+      "kl_divergence": 0.0023899728,
+      "absorption_layer": 6
+    },
+    {
+      "injection_layer": 6,
+      "p_target": 0.000032670727,
+      "kl_divergence": 0.0029907895,
+      "absorption_layer": 7
+    },
+    {
+      "injection_layer": 7,
+      "p_target": 0.000027464412,
+      "kl_divergence": 0.005826481,
+      "absorption_layer": 8
+    },
+    {
+      "injection_layer": 8,
+      "p_target": 0.000027555117,
+      "kl_divergence": 0.008223338,
+      "absorption_layer": 9
+    },
+    {
+      "injection_layer": 9,
+      "p_target": 0.000025055448,
+      "kl_divergence": 0.016632475,
+      "absorption_layer": 10
+    },
+    {
+      "injection_layer": 10,
+      "p_target": 0.00002229387,
+      "kl_divergence": 0.044218514,
+      "absorption_layer": 11
+    },
+    {
+      "injection_layer": 11,
+      "p_target": 0.000021164135,
+      "kl_divergence": 0.05117827,
+      "absorption_layer": 12
+    },
+    {
+      "injection_layer": 12,
+      "p_target": 0.000016989718,
+      "kl_divergence": 0.057488635,
+      "absorption_layer": 13
+    },
+    {
+      "injection_layer": 13,
+      "p_target": 0.000014761104,
+      "kl_divergence": 0.076785445,
+      "absorption_layer": 14
+    },
+    {
+      "injection_layer": 14,
+      "p_target": 0.000017885523,
+      "kl_divergence": 0.10306285,
+      "absorption_layer": 15
+    },
+    {
+      "injection_layer": 15,
+      "p_target": 0.00001875629,
+      "kl_divergence": 0.13389324,
+      "absorption_layer": null
+    }
+  ],
+  "best_injection_layer": 14,
+  "strength_sweep": [
+    {
+      "strength": 0.5,
+      "p_target": 0.000024037758,
+      "kl_divergence": 0.026204068,
+      "absorption_layer": 15
+    },
+    {
+      "strength": 1.0,
+      "p_target": 0.000017885523,
+      "kl_divergence": 0.10306285,
+      "absorption_layer": 15
+    },
+    {
+      "strength": 1.5,
+      "p_target": 0.00001336422,
+      "kl_divergence": 0.22408374,
+      "absorption_layer": 15
+    },
+    {
+      "strength": 2.0,
+      "p_target": 0.000010106138,
+      "kl_divergence": 0.38236365,
+      "absorption_layer": null
+    },
+    {
+      "strength": 2.5,
+      "p_target": 0.000007724272,
+      "kl_divergence": 0.57534003,
+      "absorption_layer": null
+    },
+    {
+      "strength": 3.0,
+      "p_target": 0.0000059198164,
+      "kl_divergence": 0.8039024,
+      "absorption_layer": null
+    },
+    {
+      "strength": 3.5,
+      "p_target": 0.000004515283,
+      "kl_divergence": 1.067433,
+      "absorption_layer": null
+    },
+    {
+      "strength": 4.0,
+      "p_target": 0.000003417547,
+      "kl_divergence": 1.3610424,
+      "absorption_layer": null
+    },
+    {
+      "strength": 4.5,
+      "p_target": 0.000002568483,
+      "kl_divergence": 1.6775472,
+      "absorption_layer": null
+    },
+    {
+      "strength": 5.0,
+      "p_target": 0.0000019211416,
+      "kl_divergence": 2.0097263,
+      "absorption_layer": null
+    },
+    {
+      "strength": 5.5,
+      "p_target": 0.0000014341497,
+      "kl_divergence": 2.3514671,
+      "absorption_layer": null
+    },
+    {
+      "strength": 6.0,
+      "p_target": 0.000001071514,
+      "kl_divergence": 2.6977232,
+      "absorption_layer": null
+    }
+  ],
+  "threshold": 0.95
+}
