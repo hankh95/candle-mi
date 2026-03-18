@@ -1,0 +1,185 @@
+{
+  "description": "Steering convergence batch: 20 rhyme groups from plip-rs poetry corpus. Each experiment swaps the ending word in line 3 with a word from a different rhyme group.",
+  "experiments": [
+    {
+      "group": "air",
+      "prompt": "The fisherman cast in the lake And waited there for morning's sake A stranger carried home a hair That glimmered in the fading",
+      "contrastive": "The fisherman cast in the lake And waited there for morning's sake A stranger carried home a snake That glimmered in the fading",
+      "target_token": " affair",
+      "ending_word": "hair",
+      "contrastive_word": "snake",
+      "rhyme_word": "affair"
+    },
+    {
+      "group": "ake",
+      "prompt": "The thunder rumbled, then did roar And rain came falling more and more A whisper echoed through the snake And heard the echoes of the",
+      "contrastive": "The thunder rumbled, then did roar And rain came falling more and more A whisper echoed through the small And heard the echoes of the",
+      "target_token": " flake",
+      "ending_word": "snake",
+      "contrastive_word": "small",
+      "rhyme_word": "flake"
+    },
+    {
+      "group": "all",
+      "prompt": "The sun goes up, the sun goes down The moon shines bright above the town The evening sky appeared so small And felt the presence of the",
+      "contrastive": "The sun goes up, the sun goes down The moon shines bright above the town The evening sky appeared so proclaim And felt the presence of the",
+      "target_token": " ball",
+      "ending_word": "small",
+      "contrastive_word": "proclaim",
+      "rhyme_word": "ball"
+    },
+    {
+      "group": "ame",
+      "prompt": "The robin perched upon a tree And sang its song so wild and free She taught the little ones to proclaim And placed it gently on the",
+      "contrastive": "The robin perched upon a tree And sang its song so wild and free She taught the little ones to hand And placed it gently on the",
+      "target_token": " game",
+      "ending_word": "proclaim",
+      "contrastive_word": "hand",
+      "rhyme_word": "game"
+    },
+    {
+      "group": "and",
+      "prompt": "The merchant opened up his store And spread his wares across the floor A bird took shelter in the hand The silence made her want to",
+      "contrastive": "The merchant opened up his store And spread his wares across the floor A bird took shelter in the pray The silence made her want to",
+      "target_token": " stand",
+      "ending_word": "hand",
+      "contrastive_word": "pray",
+      "rhyme_word": "stand"
+    },
+    {
+      "group": "ay",
+      "prompt": "The sailor gazed across the sea And longed for home and family She taught the little ones to pray And left behind a lonely",
+      "contrastive": "The sailor gazed across the sea And longed for home and family She taught the little ones to plea And left behind a lonely",
+      "target_token": " display",
+      "ending_word": "pray",
+      "contrastive_word": "plea",
+      "rhyme_word": "display"
+    },
+    {
+      "group": "ee",
+      "prompt": "The garden sparkled in the snow And lanterns gave a gentle glow The traveler stopped beside the plea And waited for the distant",
+      "contrastive": "The garden sparkled in the snow And lanterns gave a gentle glow The traveler stopped beside the nest And waited for the distant",
+      "target_token": " flea",
+      "ending_word": "plea",
+      "contrastive_word": "nest",
+      "rhyme_word": "flea"
+    },
+    {
+      "group": "est",
+      "prompt": "The castle stood upon the land A fortress built by careful hand The farmer worked beneath the nest And felt the presence of the",
+      "contrastive": "The castle stood upon the land A fortress built by careful hand The farmer worked beneath the bright And felt the presence of the",
+      "target_token": " quest",
+      "ending_word": "nest",
+      "contrastive_word": "bright",
+      "rhyme_word": "quest"
+    },
+    {
+      "group": "ight",
+      "prompt": "The knight completed every quest And proved himself above the rest The ancient castle stood so bright To find at last the hidden",
+      "contrastive": "The knight completed every quest And proved himself above the rest The ancient castle stood so divine To find at last the hidden",
+      "target_token": " delight",
+      "ending_word": "bright",
+      "contrastive_word": "divine",
+      "rhyme_word": "delight"
+    },
+    {
+      "group": "ine",
+      "prompt": "A story from the days of old Of daring knights and hearts of gold The evening sky appeared so divine And heard the echoes of the",
+      "contrastive": "A story from the days of old Of daring knights and hearts of gold The evening sky appeared so thing And heard the echoes of the",
+      "target_token": " decline",
+      "ending_word": "divine",
+      "contrastive_word": "thing",
+      "rhyme_word": "decline"
+    },
+    {
+      "group": "ing",
+      "prompt": "The morning sky was clear and blue The birds sang out a song they knew A bird took shelter in the thing And waited for the distant",
+      "contrastive": "The morning sky was clear and blue The birds sang out a song they knew A bird took shelter in the wire And waited for the distant",
+      "target_token": " ring",
+      "ending_word": "thing",
+      "contrastive_word": "wire",
+      "rhyme_word": "ring"
+    },
+    {
+      "group": "ire",
+      "prompt": "The garden sparkled in the snow And lanterns gave a gentle glow The children played beside the wire The silence made her want to",
+      "contrastive": "The garden sparkled in the snow And lanterns gave a gentle glow The children played beside the unfold The silence made her want to",
+      "target_token": " hire",
+      "ending_word": "wire",
+      "contrastive_word": "unfold",
+      "rhyme_word": "hire"
+    },
+    {
+      "group": "old",
+      "prompt": "The blacksmith forged with steady aim And sparks flew high from every flame He tried his very best to unfold The path ahead was truly",
+      "contrastive": "The blacksmith forged with steady aim And sparks flew high from every flame He tried his very best to noon The path ahead was truly",
+      "target_token": " cold",
+      "ending_word": "unfold",
+      "contrastive_word": "noon",
+      "rhyme_word": "cold"
+    },
+    {
+      "group": "oon",
+      "prompt": "The winter frost left morning dew On every leaf the cold wind blew The sailors ventured past the noon A memory of every",
+      "contrastive": "The winter frost left morning dew On every leaf the cold wind blew The sailors ventured past the restore A memory of every",
+      "target_token": " dune",
+      "ending_word": "noon",
+      "contrastive_word": "restore",
+      "rhyme_word": "dune"
+    },
+    {
+      "group": "ore",
+      "prompt": "The queen was known for beauty rare With flowers woven in her hair She taught the little ones to restore While standing near the ancient",
+      "contrastive": "The queen was known for beauty rare With flowers woven in her hair She taught the little ones to torn While standing near the ancient",
+      "target_token": " shore",
+      "ending_word": "restore",
+      "contrastive_word": "torn",
+      "rhyme_word": "shore"
+    },
+    {
+      "group": "orn",
+      "prompt": "The knight completed every quest And proved himself above the rest The ancient castle stood so torn That glimmered in the fading",
+      "contrastive": "The knight completed every quest And proved himself above the rest The ancient castle stood so found That glimmered in the fading",
+      "target_token": " thorn",
+      "ending_word": "torn",
+      "contrastive_word": "found",
+      "rhyme_word": "thorn"
+    },
+    {
+      "group": "ound",
+      "prompt": "The sailor gazed across the sea And longed for home and family He tried his very best to found The moment made the whole world",
+      "contrastive": "The sailor gazed across the sea And longed for home and family He tried his very best to dove The moment made the whole world",
+      "target_token": " crowned",
+      "ending_word": "found",
+      "contrastive_word": "dove",
+      "rhyme_word": "crowned"
+    },
+    {
+      "group": "ove",
+      "prompt": "A falcon soared at breathless height Then vanished quickly out of sight The old man rested by the dove To find at last the hidden",
+      "contrastive": "A falcon soared at breathless height Then vanished quickly out of sight The old man rested by the shadow To find at last the hidden",
+      "target_token": " glove",
+      "ending_word": "dove",
+      "contrastive_word": "shadow",
+      "rhyme_word": "glove"
+    },
+    {
+      "group": "ow",
+      "prompt": "A uniform was creased and worn Its fabric faded, slightly torn The poet wrote about the shadow And felt the presence of the",
+      "contrastive": "A uniform was creased and worn Its fabric faded, slightly torn The poet wrote about the drown And felt the presence of the",
+      "target_token": " row",
+      "ending_word": "shadow",
+      "contrastive_word": "drown",
+      "rhyme_word": "row"
+    },
+    {
+      "group": "own",
+      "prompt": "A painter mixed each brilliant hue And captured scenes the whole world knew She taught the little ones to drown And felt the presence of the",
+      "contrastive": "A painter mixed each brilliant hue And captured scenes the whole world knew She taught the little ones to hair And felt the presence of the",
+      "target_token": " clown",
+      "ending_word": "drown",
+      "contrastive_word": "hair",
+      "rhyme_word": "clown"
+    }
+  ]
+}

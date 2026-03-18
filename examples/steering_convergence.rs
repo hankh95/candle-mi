@@ -95,9 +95,13 @@ struct Args {
     #[arg(long)]
     target_token: Option<String>,
 
-    /// Write structured JSON output to this file
+    /// Write structured JSON output to this file (or directory for --batch-file)
     #[arg(long)]
     output: Option<PathBuf>,
+
+    /// Run all experiments from a batch JSON file (overrides --prompt/--contrastive/--target-token)
+    #[arg(long)]
+    batch_file: Option<PathBuf>,
 }
 
 // ---------------------------------------------------------------------------
@@ -147,6 +151,23 @@ struct JsonStrengthPoint {
 }
 
 // ---------------------------------------------------------------------------
+// Batch file types
+// ---------------------------------------------------------------------------
+
+#[derive(serde::Deserialize)]
+struct BatchFile {
+    experiments: Vec<BatchExperiment>,
+}
+
+#[derive(serde::Deserialize)]
+struct BatchExperiment {
+    group: String,
+    prompt: String,
+    contrastive: String,
+    target_token: String,
+}
+
+// ---------------------------------------------------------------------------
 // Prompts
 // ---------------------------------------------------------------------------
 
@@ -174,14 +195,86 @@ fn main() {
 
 fn run() -> candle_mi::Result<()> {
     let args = Args::parse();
-    run_model(&args.model, &args)
+
+    if let Some(ref batch_path) = args.batch_file {
+        return run_batch(&args, batch_path);
+    }
+
+    run_model(&args.model, &args, None)
+}
+
+/// Load model once, then run all experiments from the batch file.
+fn run_batch(args: &Args, batch_path: &Path) -> candle_mi::Result<()> {
+    let batch_text = std::fs::read_to_string(batch_path).map_err(candle_mi::MIError::Io)?;
+    let batch: BatchFile = serde_json::from_str(&batch_text).map_err(|e| {
+        candle_mi::MIError::Io(std::io::Error::new(std::io::ErrorKind::InvalidData, e))
+    })?;
+
+    println!(
+        "=== Batch mode: {} experiments from {} ===\n",
+        batch.experiments.len(),
+        batch_path.display()
+    );
+
+    // Determine output directory (--output is treated as a directory in batch mode)
+    let output_dir = args.output.as_deref();
+    if let Some(dir) = output_dir {
+        std::fs::create_dir_all(dir).map_err(candle_mi::MIError::Io)?;
+    }
+
+    // Load model once
+    let model = MIModel::from_pretrained(&args.model)?;
+    let n_layers = model.num_layers();
+    let n_heads = model.num_heads();
+    let hidden = model.hidden_size();
+    println!(
+        "  Model: {}, Layers: {n_layers}, heads: {n_heads}, hidden: {hidden}, device: {:?}\n",
+        args.model,
+        model.device()
+    );
+
+    let mut successes = 0_usize;
+    let mut skipped = 0_usize;
+
+    for (i, exp) in batch.experiments.iter().enumerate() {
+        println!(
+            "--- [{}/{}] group: {} ---",
+            i + 1,
+            batch.experiments.len(),
+            exp.group
+        );
+
+        // Build per-experiment args overlay
+        let exp_args = Args {
+            model: args.model.clone(),
+            threshold: args.threshold,
+            max_strength: args.max_strength,
+            strength_steps: args.strength_steps,
+            prompt: Some(exp.prompt.clone()),
+            contrastive: Some(exp.contrastive.clone()),
+            target_token: Some(exp.target_token.clone()),
+            output: output_dir.map(|dir| dir.join(format!("{}.json", exp.group))),
+            batch_file: None,
+        };
+
+        match run_model_with(&model, &exp_args) {
+            Ok(()) => successes += 1,
+            Err(e) => {
+                println!("  Skipped: {e}\n");
+                skipped += 1;
+            }
+        }
+    }
+
+    println!("\n=== Batch complete: {successes} succeeded, {skipped} skipped ===",);
+    Ok(())
 }
 
 // ---------------------------------------------------------------------------
 // Core experiment
 // ---------------------------------------------------------------------------
 
-fn run_model(model_id: &str, args: &Args) -> candle_mi::Result<()> {
+fn run_model(model_id: &str, args: &Args, _label: Option<&str>) -> candle_mi::Result<()> {
     println!("=== {model_id} ===");
 
     #[cfg(feature = "memory")]
@@ -194,9 +287,11 @@ fn run_model(model_id: &str, args: &Args) -> candle_mi::Result<()> {
     let n_layers = model.num_layers();
     let n_heads = model.num_heads();
     let hidden = model.hidden_size();
-    let device = model.device().clone();
 
-    println!("  Layers: {n_layers}, heads: {n_heads}, hidden: {hidden}, device: {device:?}");
+    println!(
+        "  Layers: {n_layers}, heads: {n_heads}, hidden: {hidden}, device: {:?}",
+        model.device()
+    );
     println!(
         "  Estimated F32 weight size: {:.0} MB",
         estimate_weight_mb(n_layers, hidden)
@@ -208,6 +303,15 @@ fn run_model(model_id: &str, args: &Args) -> candle_mi::Result<()> {
         let mem_after = MemorySnapshot::now(model.device())?;
         MemoryReport::new(mem_before, mem_after).print_before_after("Model load");
     }
+
+    run_model_with(&model, args)
+}
+
+/// Run the experiment on a pre-loaded model (used by both single and batch modes).
+fn run_model_with(model: &MIModel, args: &Args) -> candle_mi::Result<()> {
+    let n_layers = model.num_layers();
+    let hidden = model.hidden_size();
+    let device = model.device().clone();
 
     let tokenizer = model.tokenizer().ok_or(candle_mi::MIError::Tokenizer(
         "model has no embedded tokenizer".into(),
@@ -473,7 +577,7 @@ fn run_model(model_id: &str, args: &Args) -> candle_mi::Result<()> {
     // -----------------------------------------------------------------------
     if let Some(ref path) = args.output {
         let output = JsonOutput {
-            model_id: model_id.to_owned(),
+            model_id: args.model.clone(),
             prompt: clean_prompt.to_owned(),
             contrastive_prompt: contrastive_prompt.to_owned(),
             n_layers,
