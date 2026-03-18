@@ -161,11 +161,42 @@ residual stream clusters words in the same rhyme family so tightly that they're
 nearly indistinguishable — a direct validation of the CLT rhyme group structure
 discovered in plip-rs.
 
-### Next step: `--inject-position`
+### Position sweep: `--inject-position` doesn't help either
 
-To measure the planning attractor, the steering vector needs to be injected at
-the planning site (the rhyme-setting word position), not at the last token. This
-is the natural extension of this work.
+We added `--inject-position` (explicit number or `auto` to find the first
+differing token) and swept positions 20-27 on the "-out" couplet. Position 23
+(the "about"/"ahead" token) showed the strongest signal — but even there, max
+KL was only 0.015 and P(" out") barely moved (1.0-1.4%).
+
+This rules out position as the issue. The contrastive residual stream approach
+**fundamentally cannot capture rhyme planning** because:
+
+1. **Factual recall** is encoded as a *direction* in the residual stream — the
+   "France direction" points toward "Paris" at every layer. Steering along
+   that direction directly boosts the target.
+2. **Rhyme planning** is encoded as *CLT feature activations* — sparse,
+   nonlinear decompositions that can't be captured by a simple vector
+   subtraction between two prompts. This is exactly why CLTs exist and why
+   Figure 13 needed them.
+
+### Conclusion: two tools for two regimes
+
+| Computation type | Measurement tool | Why |
+|-----------------|-----------------|-----|
+| **Factual recall** | Contrastive steering (this example) | Recall is a direction in residual stream space |
+| **Rhyme planning** | CLT feature injection (Figure 13) | Planning is encoded in sparse feature activations |
+
+These are complementary, not competing. Steering convergence cleanly measures
+recall attractors (~1.2× critical strength, 1-2 layer absorption). Planning
+attractors require CLT decoder vectors as steering directions — the natural
+next experiment.
+
+### Next step: CLT-based steering
+
+Use CLT decoder vectors (e.g., the "around" feature L22:10243 from the 426K CLT,
+validated at 48.3% redirect) as the steering direction in steering_convergence.
+This would measure whether the model absorbs CLT-scale planning perturbations
+or whether planning circuits are outside the attractor basin.
 
 ## Experiment setup
 
