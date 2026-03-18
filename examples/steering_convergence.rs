@@ -335,7 +335,6 @@ fn run_model(model_id: &str, args: &Args) -> candle_mi::Result<()> {
 
     let mut layer_summaries: Vec<JsonLayerSummary> = Vec::with_capacity(n_layers);
     let mut best_layer = 0_usize;
-    let mut best_p = 0.0_f32;
 
     for inj_layer in 0..n_layers {
         let steered_probs = softmax_1d(&steered_logits_per_layer[inj_layer])?;
@@ -352,10 +351,25 @@ fn run_model(model_id: &str, args: &Args) -> candle_mi::Result<()> {
             kl_divergence: kl,
             absorption_layer: absorption,
         });
+    }
 
-        if p_target > best_p {
-            best_p = p_target;
-            best_layer = inj_layer;
+    // Best layer for strength sweep = deepest layer that still achieves absorption.
+    // This is the most informative site: right at the absorption boundary, where
+    // increasing strength is most likely to push past the attractor's basin.
+    best_layer = 0;
+    for s in &layer_summaries {
+        if s.absorption_layer.is_some() {
+            best_layer = s.injection_layer;
+        }
+    }
+    // Fallback: if no layer absorbs, pick the one with lowest KL divergence
+    if layer_summaries.iter().all(|s| s.absorption_layer.is_none()) {
+        let mut min_kl = f32::MAX;
+        for s in &layer_summaries {
+            if s.kl_divergence < min_kl {
+                min_kl = s.kl_divergence;
+                best_layer = s.injection_layer;
+            }
         }
     }
 
