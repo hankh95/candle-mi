@@ -7,6 +7,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+### Added
+
+- **`figure13_planning_poems` chart and explanation** (`examples/README.md`) —
+  added `gemma_log.png` (Gemma 2 2B, 426K CLT suppress "out" + inject "around")
+  with pedagogical walkthrough explaining log-scale probability spike at the
+  planning site, position-specificity, and the MI insight that rhyme planning
+  happens tokens ahead of the rhyme itself
+
 ### Changed
 
 - **`ROADMAP.md` consistency pass** — updated to reflect v0.1.3 project state:

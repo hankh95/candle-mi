@@ -494,6 +494,21 @@ tokens.  Three presets are available: `llama3.2-1b-524k` (Llama 3.2 1B),
 `gemma2-2b-426k` (Gemma 2 2B, 426K CLT), and `gemma2-2b-2.5m` (Gemma 2 2B,
 2.5M CLT with word-level feature granularity).
 
+**Gemma 2 2B, 426K CLT** — suppress "out" features + inject "around", sweep
+injection position across all tokens:
+
+![Figure 13 — Gemma 2 2B, suppress "out" + inject "around" (log scale)](figure13/gemma_log.png)
+
+**How to read this chart:** each bar shows the probability of the word "around"
+at a given token position when the injected CLT feature fires there. The y-axis
+is log-scale, so the tall red bar at "passage" means P("around") jumps from
+near-zero (~10⁻⁸ at most positions) to ~0.7 — a seven-order-of-magnitude
+spike. This is the CLT's "planning site": the model decides at "passage" what
+word will end the line, even though the rhyming word is still several tokens
+away. The flat gray baseline everywhere else confirms the effect is
+position-specific, not a global bias — the feature only influences the output
+when injected at the exact position where the model plans its rhyme.
+
 Output JSON and Mathematica plotting script are in
 [`examples/figure13/`](figure13/).
 
