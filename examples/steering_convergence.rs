@@ -95,10 +95,11 @@ struct Args {
     #[arg(long)]
     target_token: Option<String>,
 
-    /// Token position to inject at (default: last token). Use this to steer at
-    /// the planning site instead of the output position.
+    /// Token position to inject at (default: last token). Use "auto" to find
+    /// the first differing token between clean and contrastive prompts, or a
+    /// number for an explicit position.
     #[arg(long)]
-    inject_position: Option<usize>,
+    inject_position: Option<String>,
 
     /// Write structured JSON output to this file (or directory for --batch-file)
     #[arg(long)]
@@ -170,8 +171,8 @@ struct BatchExperiment {
     prompt: String,
     contrastive: String,
     target_token: String,
-    /// Optional token position to inject at (default: last token)
-    inject_position: Option<usize>,
+    /// Optional inject position: "auto", a number, or absent for last token
+    inject_position: Option<String>,
 }
 
 // ---------------------------------------------------------------------------
@@ -260,7 +261,7 @@ fn run_batch(args: &Args, batch_path: &Path) -> candle_mi::Result<()> {
             prompt: Some(exp.prompt.clone()),
             contrastive: Some(exp.contrastive.clone()),
             target_token: Some(exp.target_token.clone()),
-            inject_position: exp.inject_position.or(args.inject_position),
+            inject_position: exp.inject_position.clone().or(args.inject_position.clone()),
             output: output_dir.map(|dir| dir.join(format!("{}.json", exp.group))),
             batch_file: None,
         };
@@ -368,13 +369,13 @@ fn run_model_with(model: &MIModel, args: &Args) -> candle_mi::Result<()> {
         capture_hooks.capture(HookPoint::ResidPost(layer));
     }
 
-    // Injection position: planning site (custom) or last token (default)
-    let inject_pos = args.inject_position.unwrap_or(seq_len - 1);
-    if inject_pos >= seq_len {
-        return Err(candle_mi::MIError::Intervention(format!(
-            "--inject-position {inject_pos} is out of bounds (seq_len={seq_len})"
-        )));
-    }
+    // Injection position: auto (first differing token), explicit number, or last token
+    let inject_pos = resolve_inject_position(
+        args.inject_position.as_deref(),
+        &clean_tokens,
+        &contrastive_tokens,
+        seq_len,
+    )?;
     if args.inject_position.is_some() {
         println!("  Inject position: {inject_pos} (planning site mode)");
     }
@@ -697,6 +698,47 @@ fn extract_prob(probs: &Tensor, token_id: u32) -> candle_mi::Result<f32> {
     #[allow(clippy::as_conversions)]
     let idx = token_id as usize;
     Ok(probs.get(idx)?.to_scalar()?)
+}
+
+/// Resolve `--inject-position`: "auto" finds the first differing token,
+/// a number uses that position, `None` defaults to last token.
+fn resolve_inject_position(
+    arg: Option<&str>,
+    clean_tokens: &[u32],
+    contrastive_tokens: &[u32],
+    seq_len: usize,
+) -> candle_mi::Result<usize> {
+    match arg {
+        None => Ok(seq_len - 1),
+        Some("auto") => {
+            for (i, (a, b)) in clean_tokens
+                .iter()
+                .zip(contrastive_tokens.iter())
+                .enumerate()
+            {
+                if a != b {
+                    println!("  Auto-detected inject position: {i} (first differing token)");
+                    return Ok(i);
+                }
+            }
+            Err(candle_mi::MIError::Intervention(
+                "auto: clean and contrastive prompts have identical tokens".into(),
+            ))
+        }
+        Some(s) => {
+            let pos: usize = s.parse().map_err(|_| {
+                candle_mi::MIError::Intervention(format!(
+                    "--inject-position must be \"auto\" or a number, got \"{s}\""
+                ))
+            })?;
+            if pos >= seq_len {
+                return Err(candle_mi::MIError::Intervention(format!(
+                    "--inject-position {pos} is out of bounds (seq_len={seq_len})"
+                )));
+            }
+            Ok(pos)
+        }
+    }
 }
 
 /// Get top-k predictions from a probability tensor.
