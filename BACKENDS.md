@@ -75,6 +75,9 @@ Auto-config reads configuration from two sources:
 - Gemma/Gemma2 → `GemmaRmsNorm`, `embedding_scale`, `alternating_sliding_window`
 - Any model with `attn_logit_softcapping` → soft-capping enabled
 
+For a visual overview of how these config fields map to transformer blocks, see Raschka's
+[The Big LLM Architecture Comparison](https://magazine.sebastianraschka.com/p/the-big-llm-architecture-comparison).
+
 ### Compatibility Check
 
 Before loading weights, `check_auto_compatibility()` runs a preflight
