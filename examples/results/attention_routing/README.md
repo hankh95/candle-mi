@@ -194,6 +194,119 @@ cargo run --release --features clt,transformer,mmap --example attention_routing
 # Open attention_routing_plot.wl and evaluate all cells.
 ```
 
+## Comparison with Anthropic's "Planning in Poems"
+
+Our attention routing experiment relates directly to Anthropic's investigation
+of rhyme planning in their attribution graphs paper:
+
+> Lindsey, J., Gurnee, W., Ameisen, E., Chen, B., Pearce, A., Turner, N.,
+> Citro, C., Olah, C., & Templeton, A. (2025). *On the Biology of a Large
+> Language Model.* Transformer Circuits Thread.
+> [Section: Planning in Poems](https://transformer-circuits.pub/2025/attribution-graphs/biology.html#dives-poems)
+
+### What Anthropic found
+
+Using 30M-feature Cross-Layer Transcoders on Claude, Anthropic discovered that
+LLMs plan rhymes through a **forward planning strategy**:
+
+1. At newline tokens (before a line begins), features for candidate rhyming
+   words activate — the model pre-computes where the line needs to end
+2. These "planned word features" then influence how the model constructs the
+   entire line **backward** — writing text that naturally leads to the target word
+3. The model holds **multiple candidate rhymes** simultaneously (e.g., "rabbit"
+   and "habit" both active) before committing to one
+
+They built full attribution graphs showing how rhyming constraint features
+connect to candidate completion features, which connect to transition features,
+which finally determine output tokens. This is a layered causal hierarchy.
+
+### What Anthropic explicitly could NOT measure
+
+In their paper, Anthropic makes a striking admission about a gap in their
+methodology:
+
+> *"One crucial interaction (seems) to be mediated by changing where attention
+> heads attend, by participating in their QK circuits. **This is invisible to
+> our current approach.**"*
+
+Their attribution graph method traces information flow through CLT features
+(which replace MLPs), but it cannot see how attention heads **re-route** their
+queries and keys in response to planning features. The QK circuit — the
+mechanism that decides "which positions should attend to which other positions"
+— is a blind spot.
+
+### What our experiment measures
+
+This is exactly the gap we fill. Our `attention_routing` example directly
+measures how attention patterns change when planning features are activated:
+
+| Aspect | Anthropic | candle-mi |
+|--------|-----------|-----------|
+| **What they see** | Features activate at the planning site | Same (we use their published CLT features) |
+| **What they trace** | Feature → feature causal flow through MLPs | Feature → attention head routing changes |
+| **Attention heads** | "Invisible to our current approach" | **L21:H5 dominant; H5 family spans layers 17-25** |
+| **Attractor dynamics** | Not measured | Soft boundary at ~15×, linear regime below |
+| **Scale** | Claude (large model, internal infrastructure) | Gemma 2 2B (consumer GPU, open weights) |
+
+### How the two approaches complement each other
+
+Think of it this way. Anthropic built a map of the **roads** (which features
+connect to which other features). We measured the **traffic signals** (which
+attention heads change their routing when those features are active). You need
+both to understand how information actually flows through the network:
+
+- **Anthropic's attribution graphs** answer: *"What features are causally
+  upstream of the rhyme prediction?"* They identify the nodes in the circuit.
+- **Our attention routing** answers: *"How does the planning decision at
+  position 23 physically reach position 30?"* We identify the edges — the
+  specific attention heads that carry the signal.
+
+Together, these give a more complete picture: features at the planning site
+activate (Anthropic's finding), specific attention heads then re-route to read
+those features (our finding), and the information flows through the identified
+causal chain to produce the output (Anthropic's graph structure).
+
+### What we add beyond Anthropic
+
+1. **Direct attention head identification.** L21:H5 is the dominant planning
+   routing head in Gemma 2 2B, with head 5 appearing across multiple layers
+   (17, 21, 23, 24, 25). This is the first identification of specific attention
+   heads involved in rhyme planning — the exact measurement Anthropic said was
+   invisible to their approach.
+
+2. **Quantitative attractor characterization.** We measured how the attention
+   routing scales with intervention strength and found a soft boundary (gradual
+   saturation) rather than a hard threshold. This is a dynamical systems
+   property that attribution graphs cannot capture.
+
+3. **Suppress amplification.** We quantified that suppress+inject produces 13×
+   stronger attention routing than inject alone. This has methodological
+   implications: single-feature ablation studies may underestimate the true
+   routing effect because they don't account for competing features.
+
+4. **Cross-granularity validation.** The same head (L21:H5) dominates at both
+   426K and 2.5M CLT granularities, confirming this is a structural property
+   of the model, not an artifact of any particular CLT decomposition.
+
+### What Anthropic has that we don't (yet)
+
+1. **Full attribution graphs** — feature-to-feature causal graphs with error
+   nodes quantifying unexplained computation. This is planned for candle-mi
+   v0.2 (the `build_attribution_graph` API already exists but hasn't been
+   integrated into the convergence/routing experiments).
+
+2. **30M-feature CLTs** — much finer granularity than our 2.5M. Finer features
+   could reveal more specific routing patterns.
+
+3. **Multi-candidate analysis** — Anthropic observes simultaneous activation of
+   competing rhyme options. Our experiment could test this by injecting competing
+   features and measuring whether different attention heads route to different
+   candidates.
+
+4. **Scale** — Anthropic works on Claude (a large, proprietary model). Our
+   results on Gemma 2 2B (2.6B parameters) demonstrate the same planning
+   mechanism exists in smaller, open models on consumer hardware.
+
 ## Files
 
 | File | Description |
