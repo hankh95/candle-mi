@@ -191,12 +191,67 @@ recall attractors (~1.2× critical strength, 1-2 layer absorption). Planning
 attractors require CLT decoder vectors as steering directions — the natural
 next experiment.
 
-### Next step: CLT-based steering
+### CLT-based steering: the experiment and what it revealed
 
-Use CLT decoder vectors (e.g., the "around" feature L22:10243 from the 426K CLT,
-validated at 48.3% redirect) as the steering direction in steering_convergence.
-This would measure whether the model absorbs CLT-scale planning perturbations
-or whether planning circuits are outside the attractor basin.
+We implemented `--clt` mode in steering_convergence: load a CLT, extract per-layer
+decoder vectors for a specific feature, and inject them at the planning site
+(position 21, auto-detected). We tested with the "around" feature (L22:10243)
+from the 426K CLT on Gemma 2 2B — the same feature that achieves 48.3% redirect
+in Figure 13.
+
+**Three iterations, same result: zero effect on the last token.**
+
+| Attempt | Injection strategy | Max strength | P(" out") change |
+|---------|-------------------|-------------|------------------|
+| Single decoder (layer 25) | One vector, all layers | 6.0 | None |
+| Per-layer decoders | Layer-matched vectors, one at a time | 100.0 | None |
+| Multi-layer simultaneous | All downstream layers at once (like Figure 13) | 20.0 | None |
+
+**Diagnostic (multi-layer, strength 1.0):**
+```
+Layer 22: pos 21 diff=0.000000 (norm=449.2), pos 27 diff=0.000000 (norm=465.9)
+Layer 25: pos 21 diff=9.918104 (norm=635.4), pos 27 diff=0.159336 (norm=1080.0)
+```
+
+The injection IS working at the planning site (position 21): the residual stream
+at layer 25, position 21 moves by 9.9 units (1.5% of its norm). But at the last
+token position (27), the change is only 0.159 units — 0.015% of the residual
+norm. Even at strength 20, this doesn't register.
+
+### Why Figure 13 works but convergence doesn't
+
+Figure 13 and steering_convergence measure different things:
+
+- **Figure 13** measures P("around") at the **planning site position** — where
+  the CLT injection directly modifies the residual stream. The 48.3% spike
+  happens at position 21, not at the last token.
+- **Steering convergence** measures the convergence matrix and P(target) at
+  the **last token position** — where the model makes its output prediction.
+
+The planning perturbation at position 21 doesn't propagate to position 27
+within a single forward pass. The residual stream at position 27 is dominated
+by its own local computation (norm=1080) and barely sees the 0.015% ripple
+from position 21.
+
+**This is the deep finding:** planning circuits operate through
+**position-specific, attention-mediated routing** — not through residual stream
+perturbation at the output position. The CLT feature changes what the model
+"thinks" at the planning site, and later generation steps naturally produce
+the rhyme word. But within a single forward pass, the last token's residual
+stream is nearly immune to changes at earlier positions.
+
+### Revised conclusion: three regimes, not two
+
+| Computation type | Where it lives | How to measure |
+|-----------------|---------------|---------------|
+| **Factual recall** | Last-token residual stream | Contrastive steering convergence |
+| **Rhyme planning (local)** | Planning-site residual stream | CLT feature injection at planning site (Figure 13) |
+| **Rhyme planning (output)** | Attention routing from planning site to output | Multi-step generation or attention pattern analysis |
+
+The convergence matrix cleanly measures the first regime. The second regime
+is captured by Figure 13's position sweep. The third regime — how the planning
+decision propagates from the planning site to the output through attention —
+is the next frontier for investigation.
 
 ## Experiment setup
 

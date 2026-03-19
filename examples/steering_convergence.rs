@@ -47,6 +47,8 @@
 #![allow(clippy::too_many_lines)]
 
 use candle_core::{DType, Device, Tensor};
+#[cfg(feature = "clt")]
+use candle_mi::clt::{CltFeatureId, CrossLayerTranscoder};
 use candle_mi::interp::intervention::kl_divergence;
 use candle_mi::interp::logit_lens::format_probability;
 use candle_mi::{HookPoint, HookSpec, Intervention, MIModel, MITokenizer};
@@ -108,6 +110,21 @@ struct Args {
     /// Run all experiments from a batch JSON file (overrides --prompt/--contrastive/--target-token)
     #[arg(long)]
     batch_file: Option<PathBuf>,
+
+    /// CLT repository for feature-based steering (e.g., "mntss/clt-gemma-2-2b-426k").
+    /// When set, uses a CLT decoder vector instead of contrastive residual subtraction.
+    #[arg(long)]
+    clt: Option<String>,
+
+    /// CLT feature to use as steering direction, format "L<layer>:<index>" (e.g., "L22:10243").
+    /// Requires --clt.
+    #[arg(long)]
+    feature: Option<String>,
+
+    /// Target layer for CLT decoder vector extraction. The decoder vector at this layer
+    /// is the direction the feature adds to the residual stream. Defaults to n_layers - 1.
+    #[arg(long)]
+    decoder_layer: Option<usize>,
 }
 
 // ---------------------------------------------------------------------------
@@ -178,6 +195,31 @@ struct BatchExperiment {
 // ---------------------------------------------------------------------------
 // Prompts
 // ---------------------------------------------------------------------------
+
+/// Parse a CLT feature ID from "L<layer>:<index>" format.
+#[cfg(feature = "clt")]
+fn parse_clt_feature(s: &str) -> candle_mi::Result<CltFeatureId> {
+    let s = s.trim();
+    if !s.starts_with('L') {
+        return Err(candle_mi::MIError::Config(format!(
+            "CLT feature must start with 'L', got \"{s}\""
+        )));
+    }
+    let rest = &s[1..];
+    let parts: Vec<&str> = rest.splitn(2, ':').collect();
+    if parts.len() != 2 {
+        return Err(candle_mi::MIError::Config(format!(
+            "CLT feature must be \"L<layer>:<index>\", got \"{s}\""
+        )));
+    }
+    let layer: usize = parts[0]
+        .parse()
+        .map_err(|_| candle_mi::MIError::Config(format!("invalid layer number in \"{s}\"")))?;
+    let index: usize = parts[1]
+        .parse()
+        .map_err(|_| candle_mi::MIError::Config(format!("invalid feature index in \"{s}\"")))?;
+    Ok(CltFeatureId { layer, index })
+}
 
 const CLEAN_PROMPT: &str = "The capital of France is";
 
@@ -264,6 +306,9 @@ fn run_batch(args: &Args, batch_path: &Path) -> candle_mi::Result<()> {
             inject_position: exp.inject_position.clone().or(args.inject_position.clone()),
             output: output_dir.map(|dir| dir.join(format!("{}.json", exp.group))),
             batch_file: None,
+            clt: args.clt.clone(),
+            feature: args.feature.clone(),
+            decoder_layer: args.decoder_layer,
         };
 
         match run_model_with(&model, &exp_args) {
@@ -340,6 +385,7 @@ fn run_model_with(model: &MIModel, args: &Args) -> candle_mi::Result<()> {
                 seq_len
             )));
         }
+        // BORROW: explicit &str from String for return type
         (c.as_str(), tokens)
     } else {
         find_contrastive_prompt(tokenizer, &clean_tokens)?
@@ -417,19 +463,18 @@ fn run_model_with(model: &MIModel, args: &Args) -> candle_mi::Result<()> {
     println!();
 
     // -----------------------------------------------------------------------
-    // Step 2: Contrastive run → steering vectors
+    // Step 2: Steering vectors (CLT decoder or contrastive subtraction)
     // -----------------------------------------------------------------------
-    println!("  Step 2: Contrastive run → extracting steering vectors...");
-    let contrastive_cache = model.forward(&contrastive_input, &capture_hooks)?;
-
-    let mut steering_vectors: Vec<Tensor> = Vec::with_capacity(n_layers);
-    for layer in 0..n_layers {
-        let contrastive_resid = contrastive_cache.require(&HookPoint::ResidPost(layer))?;
-        // contrastive_resid: [1, seq_len, hidden] → [hidden] at inject position
-        let contrastive_at_pos = contrastive_resid.get(0)?.get(inject_pos)?;
-        // steering = baseline − contrastive at inject position
-        steering_vectors.push((&baseline_at_inject[layer] - &contrastive_at_pos)?);
-    }
+    let steering_vectors: Vec<Tensor> = compute_steering_vectors(
+        model,
+        args,
+        &capture_hooks,
+        &contrastive_input,
+        &baseline_at_inject,
+        n_layers,
+        inject_pos,
+        &device,
+    )?;
 
     // -----------------------------------------------------------------------
     // Step 3: Injection layer sweep
@@ -440,17 +485,36 @@ fn run_model_with(model: &MIModel, args: &Args) -> candle_mi::Result<()> {
     let mut steered_resids: Vec<Vec<Tensor>> = Vec::with_capacity(n_layers);
     let mut steered_logits_per_layer: Vec<Tensor> = Vec::with_capacity(n_layers);
 
-    for inj_layer in 0..n_layers {
-        let delta = build_position_delta(
-            &steering_vectors[inj_layer],
-            seq_len,
-            hidden,
-            inject_pos,
-            &device,
-        )?;
+    let clt_multilayer = args.clt.is_some();
 
+    for inj_layer in 0..n_layers {
         let mut hooks = HookSpec::new();
-        hooks.intervene(HookPoint::ResidPost(inj_layer), Intervention::Add(delta));
+
+        if clt_multilayer {
+            // CLT mode: inject at all layers from inj_layer to n_layers-1
+            // simultaneously, matching how CLT features write to all downstream layers
+            for target in inj_layer..n_layers {
+                let delta = build_position_delta(
+                    &steering_vectors[target],
+                    seq_len,
+                    hidden,
+                    inject_pos,
+                    &device,
+                )?;
+                hooks.intervene(HookPoint::ResidPost(target), Intervention::Add(delta));
+            }
+        } else {
+            // Contrastive mode: single-layer injection
+            let delta = build_position_delta(
+                &steering_vectors[inj_layer],
+                seq_len,
+                hidden,
+                inject_pos,
+                &device,
+            )?;
+            hooks.intervene(HookPoint::ResidPost(inj_layer), Intervention::Add(delta));
+        }
+
         for layer in 0..n_layers {
             hooks.capture(HookPoint::ResidPost(layer));
         }
@@ -458,6 +522,41 @@ fn run_model_with(model: &MIModel, args: &Args) -> candle_mi::Result<()> {
         let steered_cache = model.forward(&clean_input, &hooks)?;
         let steered_logits = last_token_logits(steered_cache.output(), seq_len)?;
         steered_logits_per_layer.push(steered_logits);
+
+        // Diagnostic: on first CLT injection, check if residual actually changed
+        if clt_multilayer && inj_layer == 0 {
+            for check_layer in [n_layers - 4, n_layers - 1] {
+                let resid = steered_cache.require(&HookPoint::ResidPost(check_layer))?;
+                let at_inject = resid.get(0)?.get(inject_pos)?.to_dtype(DType::F32)?;
+                let at_last = resid.get(0)?.get(seq_len - 1)?.to_dtype(DType::F32)?;
+                let base_inject = baseline_cache
+                    .require(&HookPoint::ResidPost(check_layer))?
+                    .get(0)?
+                    .get(inject_pos)?
+                    .to_dtype(DType::F32)?;
+                let base_last = baseline_cache
+                    .require(&HookPoint::ResidPost(check_layer))?
+                    .get(0)?
+                    .get(seq_len - 1)?
+                    .to_dtype(DType::F32)?;
+                let diff_inject: f32 = (&at_inject - &base_inject)?
+                    .sqr()?
+                    .sum_all()?
+                    .to_scalar::<f32>()?
+                    .sqrt();
+                let diff_last: f32 = (&at_last - &base_last)?
+                    .sqr()?
+                    .sum_all()?
+                    .to_scalar::<f32>()?
+                    .sqrt();
+                let norm_inject: f32 = base_inject.sqr()?.sum_all()?.to_scalar::<f32>()?.sqrt();
+                let norm_last: f32 = base_last.sqr()?.sum_all()?.to_scalar::<f32>()?.sqrt();
+                println!(
+                    "    [DIAG] Layer {check_layer}: pos {inject_pos} diff={diff_inject:.6} (norm={norm_inject:.1}), pos {} diff={diff_last:.6} (norm={norm_last:.1})",
+                    seq_len - 1
+                );
+            }
+        }
 
         let mut layer_resids = Vec::with_capacity(n_layers);
         for obs_layer in 0..n_layers {
@@ -547,11 +646,21 @@ fn run_model_with(model: &MIModel, args: &Args) -> candle_mi::Result<()> {
         #[allow(clippy::as_conversions)]
         let strength = step as f32 * step_size;
 
-        let scaled = (&steering_vectors[best_layer] * f64::from(strength))?;
-        let delta = build_position_delta(&scaled, seq_len, hidden, inject_pos, &device)?;
-
         let mut hooks = HookSpec::new();
-        hooks.intervene(HookPoint::ResidPost(best_layer), Intervention::Add(delta));
+
+        if clt_multilayer {
+            // CLT mode: inject at all layers from best_layer to n_layers-1
+            for target in best_layer..n_layers {
+                let scaled = (&steering_vectors[target] * f64::from(strength))?;
+                let delta = build_position_delta(&scaled, seq_len, hidden, inject_pos, &device)?;
+                hooks.intervene(HookPoint::ResidPost(target), Intervention::Add(delta));
+            }
+        } else {
+            let scaled = (&steering_vectors[best_layer] * f64::from(strength))?;
+            let delta = build_position_delta(&scaled, seq_len, hidden, inject_pos, &device)?;
+            hooks.intervene(HookPoint::ResidPost(best_layer), Intervention::Add(delta));
+        }
+
         for layer in 0..n_layers {
             hooks.capture(HookPoint::ResidPost(layer));
         }
@@ -619,6 +728,133 @@ fn run_model_with(model: &MIModel, args: &Args) -> candle_mi::Result<()> {
     }
 
     Ok(())
+}
+
+// ---------------------------------------------------------------------------
+// Steering vector computation (CLT or contrastive)
+// ---------------------------------------------------------------------------
+
+/// Compute steering vectors: either from a CLT decoder vector or via contrastive
+/// residual subtraction. Returns one `[hidden]` vector per layer.
+///
+/// In CLT mode, the same decoder vector is used for all injection layers.
+/// In contrastive mode, each layer gets its own (baseline − contrastive) vector.
+#[allow(clippy::too_many_arguments)]
+fn compute_steering_vectors(
+    model: &MIModel,
+    args: &Args,
+    capture_hooks: &HookSpec,
+    contrastive_input: &Tensor,
+    baseline_at_inject: &[Tensor],
+    n_layers: usize,
+    inject_pos: usize,
+    device: &Device,
+) -> candle_mi::Result<Vec<Tensor>> {
+    #[cfg(feature = "clt")]
+    if let Some(ref clt_repo) = args.clt {
+        return compute_clt_steering(clt_repo, args, n_layers, device);
+    }
+
+    // Contrastive mode (default)
+    println!("  Step 2: Contrastive run → extracting steering vectors...");
+    let contrastive_cache = model.forward(contrastive_input, capture_hooks)?;
+
+    let mut steering_vectors: Vec<Tensor> = Vec::with_capacity(n_layers);
+    for layer in 0..n_layers {
+        let contrastive_resid = contrastive_cache.require(&HookPoint::ResidPost(layer))?;
+        // contrastive_resid: [1, seq_len, hidden] → [hidden] at inject position
+        let contrastive_at_pos = contrastive_resid.get(0)?.get(inject_pos)?;
+        // steering = baseline − contrastive at inject position
+        steering_vectors.push((&baseline_at_inject[layer] - &contrastive_at_pos)?);
+    }
+    Ok(steering_vectors)
+}
+
+/// Load a CLT and extract per-layer decoder vectors to use as steering directions.
+///
+/// Each injection layer L gets the decoder vector for target layer L, so the
+/// steering direction matches the layer's internal geometry. For layers below
+/// the feature's source layer, a zero vector is used (the feature doesn't
+/// write to those layers).
+///
+/// If `--decoder-layer` is set, that single decoder vector is used for all
+/// layers (legacy single-vector mode).
+#[cfg(feature = "clt")]
+fn compute_clt_steering(
+    clt_repo: &str,
+    args: &Args,
+    n_layers: usize,
+    device: &Device,
+) -> candle_mi::Result<Vec<Tensor>> {
+    let feature_str = args.feature.as_deref().ok_or_else(|| {
+        candle_mi::MIError::Config("--clt requires --feature (e.g., --feature L22:10243)".into())
+    })?;
+    let feature = parse_clt_feature(feature_str)?;
+
+    println!("  Step 2: CLT decoder vector extraction...");
+    println!("    CLT: {clt_repo}");
+
+    let mut clt = CrossLayerTranscoder::open(clt_repo)?;
+    let d_model = clt.config().d_model;
+
+    if let Some(decoder_layer) = args.decoder_layer {
+        // Single-vector mode (legacy): same vector for all layers
+        println!(
+            "    Feature: L{}:{}, single decoder target layer: {decoder_layer}",
+            feature.layer, feature.index
+        );
+        // decoder_vector: [d_model]
+        let decoder_vec = clt.decoder_vector(&feature, decoder_layer, device)?;
+        // PROMOTE: CLT decoder weights are BF16; steering needs F32
+        let decoder_vec = decoder_vec.to_dtype(DType::F32)?;
+        let norm: f32 = decoder_vec.sqr()?.sum_all()?.to_scalar::<f32>()?.sqrt();
+        println!("    Decoder vector norm: {norm:.4}");
+        let steering_vectors: Vec<Tensor> = (0..n_layers).map(|_| decoder_vec.clone()).collect();
+        return Ok(steering_vectors);
+    }
+
+    // Per-layer mode: each injection layer L gets the decoder vector for target layer L
+    println!(
+        "    Feature: L{}:{}, per-layer decoder vectors (layers {}..{})",
+        feature.layer,
+        feature.index,
+        feature.layer,
+        n_layers - 1
+    );
+
+    let mut steering_vectors: Vec<Tensor> = Vec::with_capacity(n_layers);
+    let zero = Tensor::zeros(d_model, DType::F32, device)?;
+
+    for target_layer in 0..n_layers {
+        if target_layer < feature.layer {
+            // Feature doesn't write to layers below its source
+            steering_vectors.push(zero.clone());
+        } else {
+            // decoder_vector: [d_model]
+            let vec = clt.decoder_vector(&feature, target_layer, device)?;
+            // PROMOTE: CLT decoder weights are BF16; steering needs F32
+            let vec = vec.to_dtype(DType::F32)?;
+            steering_vectors.push(vec);
+        }
+    }
+
+    // Report norm range for the active layers
+    let mut min_norm = f32::MAX;
+    let mut max_norm = 0.0_f32;
+    for (i, v) in steering_vectors.iter().enumerate() {
+        if i >= feature.layer {
+            let norm: f32 = v.sqr()?.sum_all()?.to_scalar::<f32>()?.sqrt();
+            if norm < min_norm {
+                min_norm = norm;
+            }
+            if norm > max_norm {
+                max_norm = norm;
+            }
+        }
+    }
+    println!("    Decoder vector norms: {min_norm:.4}..{max_norm:.4}");
+
+    Ok(steering_vectors)
 }
 
 // ---------------------------------------------------------------------------
@@ -829,10 +1065,6 @@ fn print_convergence_matrix(matrix: &[Vec<f32>], n_layers: usize) {
         for &sim in row {
             if sim >= 0.999 {
                 print!("  1.000");
-            } else if sim >= 0.95 {
-                print!("  {sim:.3}");
-            } else if sim >= 0.90 {
-                print!("  {sim:.3}");
             } else {
                 print!("  {sim:.3}");
             }
@@ -858,6 +1090,7 @@ fn print_layer_summary(summaries: &[JsonLayerSummary], target_text: &str) {
     for s in summaries {
         let absorption = match s.absorption_layer {
             Some(l) => format!("Layer {l}"),
+            // BORROW: owned String needed for format alignment
             None => "--".to_owned(),
         };
         println!(
@@ -887,6 +1120,7 @@ fn print_strength_sweep(sweep: &[JsonStrengthPoint], best_layer: usize, target_t
     for pt in sweep {
         let absorption = match pt.absorption_layer {
             Some(l) => format!("Layer {l}"),
+            // BORROW: owned String needed for format alignment
             None => "--".to_owned(),
         };
         println!(
