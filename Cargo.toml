@@ -104,6 +104,10 @@ name = "quick_start_sae"
 required-features = ["sae", "transformer"]
 
 [[example]]
+name = "attention_routing"
+required-features = ["clt", "transformer"]
+
+[[example]]
 name = "figure13_planning_poems"
 required-features = ["clt", "transformer"]
 
